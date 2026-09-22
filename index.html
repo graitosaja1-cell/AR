@@ -409,6 +409,12 @@
     margin-top:10px; font-size:10.5px; color: var(--text-muted);
     font-family:'IBM Plex Mono', monospace;
   }
+  .ringkasan-viewall{
+    font-family:'Inter', sans-serif; font-size:10.5px; font-weight:700;
+    color: var(--blue-main); background: none; border: none; cursor: pointer;
+    padding: 0; text-decoration: underline; text-underline-offset: 2px;
+  }
+  .ringkasan-viewall:hover{ opacity: .75; }
 
   .searchbox{
     flex:1; min-width:180px;
@@ -2446,9 +2452,22 @@ function renderRingkasan(belum){
 
   const totalCat = rowsCat.length;
   const sisaTotalCat = rowsCat.reduce((a, r) => a + r.sisaRiil, 0);
-  footEl.textContent = totalCat > RINGKASAN_LIMIT
-    ? `Menampilkan ${RINGKASAN_LIMIT} faktur tertua dari total ${totalCat} faktur belum lunas (${ringkasanSumber}) \u00b7 total sisa kategori ini: Rp ${Math.round(sisaTotalCat).toLocaleString('id-ID')}`
-    : `Total ${totalCat} faktur belum lunas (${ringkasanSumber}) \u00b7 total sisa: Rp ${Math.round(sisaTotalCat).toLocaleString('id-ID')}`;
+  const infoText = totalCat > RINGKASAN_LIMIT
+    ? `Menampilkan ${RINGKASAN_LIMIT} faktur tertua dari total ${totalCat} faktur belum lunas (${escapeHtml(ringkasanSumber)}) \u00b7 total sisa kategori ini: Rp ${Math.round(sisaTotalCat).toLocaleString('id-ID')}`
+    : `Total ${totalCat} faktur belum lunas (${escapeHtml(ringkasanSumber)}) \u00b7 total sisa: Rp ${Math.round(sisaTotalCat).toLocaleString('id-ID')}`;
+  footEl.innerHTML = `${infoText} &middot; <button type="button" class="ringkasan-viewall" id="ringkasanViewAll">Lihat semua faktur &rarr;</button>`;
+  const viewAllBtn = document.getElementById('ringkasanViewAll');
+  if (viewAllBtn){
+    viewAllBtn.addEventListener('click', () => {
+      document.querySelectorAll('.tabbtn[data-cat]').forEach(b => b.classList.remove('active'));
+      const belumBtn = document.querySelector('.tabbtn[data-cat="belum"]');
+      if (belumBtn) belumBtn.classList.add('active');
+      activeCat = 'belum';
+      const sel = document.getElementById('sumberFilter');
+      if (sel) sel.value = ringkasanSumber;
+      render();
+    });
+  }
 }
 
 // ============================================================
