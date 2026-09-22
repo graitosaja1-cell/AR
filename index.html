@@ -346,6 +346,12 @@
   .tabbtn[data-cat="titip"].active{background:var(--amber); border-color:var(--amber); color:#fff;}
   .tabbtn[data-cat="lunas"].active{background:var(--green); border-color:var(--green); color:#fff;}
   .tabbtn[data-cat="ringkasan"].active{background:#7c3aed; border-color:#7c3aed; color:#fff;}
+  .tabbtn[data-cat="uangmasuk"].active{background:#0d9488; border-color:#0d9488; color:#fff;}
+  .tab-badge{
+    display:inline-block; min-width:15px; padding:1px 5px; margin-left:5px;
+    background:var(--red); color:#fff; border-radius:999px;
+    font-size:9.5px; font-weight:700; line-height:1.4; vertical-align:middle;
+  }
 
   /* ---------- RINGKASAN ---------- */
   .ringkasan-wrap{
@@ -415,6 +421,52 @@
     padding: 0; text-decoration: underline; text-underline-offset: 2px;
   }
   .ringkasan-viewall:hover{ opacity: .75; }
+  table.ringkasan-table tbody tr{ cursor:pointer; }
+  table.ringkasan-table tbody tr.rk-tagged{ background: rgba(234,88,12,0.08); }
+  table.ringkasan-table tbody tr.rk-tagged:hover{ background: rgba(234,88,12,0.16); }
+  .rk-flag{ margin-right:4px; }
+
+  /* ---------- Aksi Faktur modal (tanda cepat) ---------- */
+  .af-info{ display:grid; grid-template-columns:1fr 1fr; gap:8px 14px; margin-bottom:14px; padding:12px; background:var(--hover-bg); border-radius:8px; }
+  .af-info .af-item{ display:flex; flex-direction:column; gap:2px; }
+  .af-info .af-item.full{ grid-column:1/-1; }
+  .af-info .af-label{ font-family:'IBM Plex Mono',monospace; font-size:9.5px; text-transform:uppercase; letter-spacing:.05em; color:var(--text-muted); }
+  .af-info .af-value{ font-size:13px; font-weight:600; word-break:break-word; }
+  .af-info .af-value.accent-red{ color:var(--red); }
+  .btn-mark{
+    font-family:'Inter',sans-serif; font-size:12.5px; font-weight:600;
+    padding:10px 16px; border:1px solid var(--amber); background:var(--amber);
+    color:#fff; border-radius:6px; cursor:pointer; width:100%;
+  }
+  .btn-mark:hover{ background:#c2410c; border-color:#c2410c; }
+  .af-status-box{
+    padding:12px; border-radius:8px; background:rgba(234,88,12,0.08);
+    border:1px solid rgba(234,88,12,0.25); font-size:12.5px; line-height:1.65; margin-bottom:14px;
+  }
+  .btn-danger-outline{
+    font-family:'Inter',sans-serif; font-size:12px; padding:8px 14px;
+    border:1px solid var(--red); background:transparent; color:var(--red);
+    border-radius:6px; cursor:pointer; width:100%;
+  }
+  .btn-danger-outline:hover{ background:rgba(220,38,38,0.08); }
+
+  /* ---------- Cek Data Uang Masuk ---------- */
+  .um-status{ display:inline-block; padding:2px 8px; border-radius:999px; font-size:10px; font-weight:700; white-space:nowrap; }
+  .um-status.pending{ background:rgba(234,88,12,0.15); color:var(--amber); }
+  .um-status.verified{ background:rgba(5,150,105,0.15); color:var(--green); }
+  .um-status.rejected{ background:rgba(220,38,38,0.15); color:var(--red); }
+  .um-actions{ display:flex; gap:6px; }
+  .btn-verify{
+    font-family:'Inter',sans-serif; font-size:11px; font-weight:600; padding:5px 10px;
+    border:1px solid var(--green); background:var(--green); color:#fff; border-radius:5px; cursor:pointer;
+  }
+  .btn-verify:hover{ background:#047857; }
+  .btn-reject{
+    font-family:'Inter',sans-serif; font-size:11px; font-weight:600; padding:5px 10px;
+    border:1px solid var(--red); background:transparent; color:var(--red); border-radius:5px; cursor:pointer;
+  }
+  .btn-reject:hover{ background:rgba(220,38,38,0.08); }
+  .um-sub{ font-size:10.5px; color:var(--text-muted); margin-top:2px; }
   .ringkasan-tablewrap{ -webkit-overflow-scrolling: touch; }
 
   @media (max-width: 600px){
@@ -962,6 +1014,7 @@
   <div class="controls">
     <button class="tabbtn" data-cat="semua">SEMUA</button>
     <button class="tabbtn active" data-cat="ringkasan">RINGKASAN</button>
+    <button class="tabbtn" data-cat="uangmasuk">UANG MASUK<span class="tab-badge" id="umBadgeMain" style="display:none;">0</span></button>
     <button class="tabbtn" data-cat="belum">BELUM LUNAS</button>
     <button class="tabbtn" data-cat="titip">TITIP</button>
     <button class="tabbtn" data-cat="lunas">SUDAH LUNAS</button>
@@ -1052,6 +1105,36 @@
     <div class="ringkasan-foot" id="ringkasanFoot"></div>
   </div>
 
+  <!-- ===== CEK DATA UANG MASUK (verifikasi tanda cepat) ===== -->
+  <div class="ringkasan-wrap" id="uangMasukView" style="display:none;">
+    <div class="ringkasan-toprow">
+      <h2 class="ringkasan-title">Cek Data Uang Masuk <span class="ringkasan-status" style="color:var(--amber);">(verifikasi tanda cepat)</span></h2>
+      <div class="ringkasan-subtabs" id="umSubtabs"></div>
+      <div class="ringkasan-date" id="umDate"></div>
+    </div>
+    <div class="ringkasan-tablewrap">
+      <table class="ringkasan-table" id="umTable">
+        <thead>
+          <tr>
+            <th>No</th>
+            <th>Tgl Tanda</th>
+            <th>Sumber</th>
+            <th>No Faktur</th>
+            <th>Toko</th>
+            <th class="num">Sisa Saat Ditandai</th>
+            <th class="num">Jumlah Diterima</th>
+            <th>Ditandai Oleh</th>
+            <th>Status</th>
+            <th>Aksi</th>
+          </tr>
+        </thead>
+        <tbody id="umTbody"></tbody>
+      </table>
+    </div>
+    <div class="ringkasan-empty" id="umEmpty" style="display:none;">Tidak ada data pada kategori ini.</div>
+    <div class="ringkasan-foot" id="umFoot"></div>
+  </div>
+
   <!-- ===== EMPTY STATE ===== -->
   <div class="empty-state" id="emptyState" style="display:none;">
     <span class="big">Belum ada data</span>
@@ -1125,14 +1208,63 @@
   </div>
 </div>
 
+<!-- ===== MODAL AKSI FAKTUR (tanda cepat) ===== -->
+<div class="modal-overlay" id="aksiFakturModal">
+  <div class="modal-box">
+    <div class="modal-header" style="background:var(--amber);">
+      <h3>Aksi Faktur</h3>
+      <button type="button" class="modal-close" id="afCloseBtn" title="Tutup">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="af-info">
+        <div class="af-item"><span class="af-label">No Faktur</span><span class="af-value" id="afNoFaktur">-</span></div>
+        <div class="af-item"><span class="af-label">Sumber</span><span class="af-value" id="afSumber">-</span></div>
+        <div class="af-item full"><span class="af-label">Toko</span><span class="af-value" id="afToko">-</span></div>
+        <div class="af-item full"><span class="af-label">Alamat</span><span class="af-value" id="afAlamat">-</span></div>
+        <div class="af-item"><span class="af-label">Sisa Tagihan</span><span class="af-value accent-red" id="afSisa">Rp 0</span></div>
+      </div>
+
+      <!-- Status: sudah ditandai, menunggu verifikasi -->
+      <div id="afStatusSection" style="display:none;">
+        <div class="af-status-box" id="afStatusText"></div>
+        <button type="button" class="btn-danger-outline" id="afBatalkanBtn">Batalkan Tanda</button>
+      </div>
+
+      <!-- Form: belum ditandai -->
+      <form id="afForm" autocomplete="off">
+        <div class="form-grid" id="afFormSection">
+          <div class="form-group full">
+            <label for="afNamaStaf">Nama Staf (yang terima uang) *</label>
+            <input type="text" id="afNamaStaf" required placeholder="Nama staf">
+          </div>
+          <div class="form-group full">
+            <label for="afJumlahDiterima">Jumlah Uang Diterima (Rp) *</label>
+            <input type="number" id="afJumlahDiterima" required min="0" step="1" placeholder="0">
+            <span class="form-hint">Default = sisa tagihan. Ubah jika pembayaran sebagian (titip).</span>
+          </div>
+          <div class="form-group full">
+            <label for="afCatatan">Catatan (opsional)</label>
+            <input type="text" id="afCatatan" placeholder="mis. transfer BCA, cash, dll.">
+          </div>
+        </div>
+        <div class="form-actions">
+          <button type="button" class="btn-cancel" id="afCancelBtn">Tutup</button>
+          <button type="submit" class="btn-mark" id="afSubmitBtn" style="width:auto;">🚩 Tandai Sudah Bayar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
 <script>
 // ============================================================
 //  INDEXEDDB WRAPPER (Promise-based, tanpa library eksternal)
 // ============================================================
 const DB_NAME = 'PiutangDB';
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 const STORE_SLOTS = 'slots';
 const STORE_META = 'meta';
+const STORE_TANDA = 'tanda_masuk';
 
 let _dbInstance = null;
 
@@ -1147,6 +1279,9 @@ function openDB(){
       }
       if (!db.objectStoreNames.contains(STORE_META)){
         db.createObjectStore(STORE_META, { keyPath: 'key' });
+      }
+      if (!db.objectStoreNames.contains(STORE_TANDA)){
+        db.createObjectStore(STORE_TANDA, { keyPath: 'id' });
       }
     };
     req.onsuccess = () => { _dbInstance = req.result; resolve(_dbInstance); };
@@ -1334,6 +1469,129 @@ function subscribeRealtime(){
   } catch(e){
     console.error('Gagal berlangganan realtime:', e);
   }
+}
+
+// ============================================================
+//  TANDA CEPAT (uang masuk) — penyimpanan lokal + sinkron cloud
+// ============================================================
+const SUPABASE_TABLE_TANDA = 'piutang_tanda';
+let tandaList = [];
+let realtimeChannelTanda = null;
+let tandaCloudWarned = false;
+
+function genId(){
+  if (window.crypto && typeof window.crypto.randomUUID === 'function') return window.crypto.randomUUID();
+  return 'id-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 10);
+}
+
+async function loadTandaFromStorage(){
+  try {
+    tandaList = await idbGetAll(STORE_TANDA);
+  } catch(e){
+    console.error('Gagal memuat data tanda dari IndexedDB:', e);
+    tandaList = [];
+  }
+}
+
+async function saveTandaLocal(item){
+  try {
+    await idbPut(STORE_TANDA, item);
+  } catch(e){
+    console.error('Gagal menyimpan tanda ke IndexedDB:', e);
+  }
+}
+
+async function deleteTandaLocal(id){
+  try {
+    await idbDelete(STORE_TANDA, id);
+  } catch(e){
+    console.error('Gagal menghapus tanda dari IndexedDB:', e);
+  }
+}
+
+// Kirim satu tanda ke cloud (Supabase). Gagal secara diam-diam jika tabel
+// 'piutang_tanda' belum dibuat di Supabase — data tetap aman di IndexedDB lokal.
+async function cloudPushTanda(item){
+  if (!supabaseClient) return;
+  try {
+    const { error } = await supabaseClient
+      .from(SUPABASE_TABLE_TANDA)
+      .upsert({
+        id: item.id,
+        sumber: item.sumber,
+        no_faktur: String(item.noFaktur),
+        toko: item.toko,
+        alamat: item.alamat || '',
+        sisa_saat_tanda: item.sisaSaatTanda,
+        jumlah_diterima: item.jumlahDiterima,
+        ditandai_oleh: item.ditandaiOleh,
+        tgl_ditandai: item.tglDitandai,
+        catatan: item.catatan || '',
+        status: item.status,
+        diverifikasi_oleh: item.diverifikasiOleh || null,
+        tgl_verifikasi: item.tglVerifikasi || null,
+        catatan_verifikasi: item.catatanVerifikasi || null,
+        updated_at: new Date().toISOString()
+      }, { onConflict: 'id' });
+    if (error) throw error;
+  } catch(e){
+    if (!tandaCloudWarned){
+      tandaCloudWarned = true;
+      console.warn('Sinkron tanda ke cloud gagal (tabel "piutang_tanda" mungkin belum dibuat di Supabase). Data tetap tersimpan lokal.', e);
+    }
+  }
+}
+
+async function cloudDeleteTanda(id){
+  if (!supabaseClient) return;
+  try {
+    const { error } = await supabaseClient.from(SUPABASE_TABLE_TANDA).delete().eq('id', id);
+    if (error) throw error;
+  } catch(e){ /* diam-diam gagal, sama seperti cloudPushTanda */ }
+}
+
+async function cloudPullTandaAll(opts){
+  opts = opts || {};
+  if (!supabaseClient) return;
+  try {
+    const { data, error } = await supabaseClient.from(SUPABASE_TABLE_TANDA).select('*');
+    if (error) throw error;
+    const mapped = (data || []).map(row => ({
+      id: row.id,
+      sumber: row.sumber,
+      noFaktur: row.no_faktur,
+      toko: row.toko,
+      alamat: row.alamat,
+      sisaSaatTanda: row.sisa_saat_tanda,
+      jumlahDiterima: row.jumlah_diterima,
+      ditandaiOleh: row.ditandai_oleh,
+      tglDitandai: row.tgl_ditandai,
+      catatan: row.catatan,
+      status: row.status,
+      diverifikasiOleh: row.diverifikasi_oleh,
+      tglVerifikasi: row.tgl_verifikasi,
+      catatanVerifikasi: row.catatan_verifikasi
+    }));
+    tandaList = mapped;
+    for (const item of tandaList){ await saveTandaLocal(item); }
+    if (activeCat === 'uangmasuk' || activeCat === 'ringkasan') render();
+    else updateUangMasukBadge();
+    if (!opts.silent) showToast('Data uang masuk tersinkron dari cloud.', 'success');
+  } catch(e){
+    // Tabel belum ada / offline — abaikan diam-diam, tetap pakai data lokal.
+  }
+}
+
+function subscribeRealtimeTanda(){
+  if (!supabaseClient || realtimeChannelTanda) return;
+  try {
+    realtimeChannelTanda = supabaseClient
+      .channel('piutang_tanda_changes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: SUPABASE_TABLE_TANDA }, () => {
+        cloudPullTandaAll({ silent: true });
+      })
+      .subscribe();
+  } catch(e){ /* abaikan jika gagal berlangganan */ }
 }
 
 // ============================================================
@@ -2451,11 +2709,14 @@ function renderRingkasan(belum){
   tbody.innerHTML = filtered.map((r, idx) => {
     const d = umurPiutangHari(r.tglJatuhTempo);
     const umurText = d === null ? '-' : `${d}`;
+    const tanda = findTandaPending(r);
+    const tagCls = tanda ? ' rk-tagged' : '';
+    const flag = tanda ? `<span class="rk-flag" title="Sudah ditandai sudah bayar oleh ${escapeHtml(tanda.ditandaiOleh||'-')}, menunggu verifikasi akuntan">🚩</span>` : '';
     return `
-    <tr>
+    <tr class="${tagCls}" data-idx="${idx}">
       <td>${idx + 1}</td>
       <td class="rk-sales">${escapeHtml(r.sales)}</td>
-      <td>${escapeHtml(String(r.noFaktur))}</td>
+      <td>${flag}${escapeHtml(String(r.noFaktur))}</td>
       <td class="rk-toko">${escapeHtml(r.toko)}</td>
       <td>${fmtDate(r.tglFaktur)}</td>
       <td>${fmtDate(r.tglJatuhTempo)}</td>
@@ -2463,6 +2724,13 @@ function renderRingkasan(belum){
       <td class="num rk-umur">${umurText}</td>
     </tr>`;
   }).join('');
+
+  tbody.querySelectorAll('tr[data-idx]').forEach(tr => {
+    tr.addEventListener('click', () => {
+      const row = filtered[Number(tr.dataset.idx)];
+      if (row) openAksiFakturModal(row);
+    });
+  });
 
   const totalCat = rowsCat.length;
   const sisaTotalCat = rowsCat.reduce((a, r) => a + r.sisaRiil, 0);
@@ -2485,9 +2753,306 @@ function renderRingkasan(belum){
 }
 
 // ============================================================
+//  TANDA CEPAT — aksi staf (tandai sudah bayar) & verifikasi akuntan
+// ============================================================
+let currentAksiRow = null;
+
+function findTandaPending(r){
+  return tandaList.find(t => t.status === 'pending' && t.sumber === r.sumber && String(t.noFaktur) === String(r.noFaktur)) || null;
+}
+
+function updateUangMasukBadge(){
+  const pendingCount = tandaList.filter(t => t.status === 'pending').length;
+  const badge = document.getElementById('umBadgeMain');
+  if (!badge) return;
+  if (pendingCount > 0){
+    badge.textContent = pendingCount;
+    badge.style.display = '';
+  } else {
+    badge.style.display = 'none';
+  }
+}
+
+function openAksiFakturModal(r){
+  currentAksiRow = r;
+  const existing = findTandaPending(r);
+
+  document.getElementById('afNoFaktur').textContent = String(r.noFaktur);
+  document.getElementById('afSumber').textContent = r.sumber || '-';
+  document.getElementById('afToko').textContent = r.toko || '-';
+  document.getElementById('afAlamat').textContent = r.alamat || '-';
+  document.getElementById('afSisa').textContent = fmtRp(r.sisaRiil);
+
+  const formSection = document.getElementById('afFormSection');
+  const formActions = document.querySelector('#afForm .form-actions');
+  const statusSection = document.getElementById('afStatusSection');
+
+  if (existing){
+    formSection.style.display = 'none';
+    formActions.style.display = 'none';
+    statusSection.style.display = 'block';
+    const tglStr = existing.tglDitandai ? new Date(existing.tglDitandai).toLocaleString('id-ID') : '-';
+    document.getElementById('afStatusText').innerHTML =
+      `🚩 Ditandai <b>Sudah Bayar</b> oleh <b>${escapeHtml(existing.ditandaiOleh || '-')}</b><br>` +
+      `Tanggal tanda: ${tglStr}<br>` +
+      `Jumlah diterima: ${fmtRp(existing.jumlahDiterima)}` +
+      (existing.catatan ? `<br>Catatan: ${escapeHtml(existing.catatan)}` : '') +
+      `<br><br>⏳ Menunggu verifikasi staf akuntan di tab <b>UANG MASUK</b>.`;
+    document.getElementById('afBatalkanBtn').onclick = () => batalkanTanda(existing.id);
+  } else {
+    formSection.style.display = '';
+    formActions.style.display = '';
+    statusSection.style.display = 'none';
+    let lastName = '';
+    try { lastName = localStorage.getItem('lastStaffName') || ''; } catch(e){}
+    document.getElementById('afNamaStaf').value = lastName;
+    document.getElementById('afJumlahDiterima').value = Math.max(0, Math.round(r.sisaRiil));
+    document.getElementById('afCatatan').value = '';
+  }
+
+  document.getElementById('aksiFakturModal').classList.add('show');
+}
+
+function closeAksiFakturModal(){
+  document.getElementById('aksiFakturModal').classList.remove('show');
+  currentAksiRow = null;
+}
+
+document.getElementById('afCloseBtn').addEventListener('click', closeAksiFakturModal);
+document.getElementById('afCancelBtn').addEventListener('click', closeAksiFakturModal);
+document.getElementById('aksiFakturModal').addEventListener('click', function(e){
+  if (e.target === this) closeAksiFakturModal();
+});
+
+document.getElementById('afForm').addEventListener('submit', async function(e){
+  e.preventDefault();
+  if (!currentAksiRow) return;
+  const r = currentAksiRow;
+
+  const namaStaf = document.getElementById('afNamaStaf').value.trim();
+  const jumlahDiterima = Number(document.getElementById('afJumlahDiterima').value);
+  const catatan = document.getElementById('afCatatan').value.trim();
+
+  if (!namaStaf){
+    alert('Mohon isi nama staf.');
+    return;
+  }
+  if (!isFinite(jumlahDiterima) || jumlahDiterima <= 0){
+    alert('Jumlah uang diterima harus lebih dari 0.');
+    return;
+  }
+
+  try { localStorage.setItem('lastStaffName', namaStaf); } catch(err){}
+
+  const item = {
+    id: genId(),
+    sumber: r.sumber,
+    noFaktur: r.noFaktur,
+    toko: r.toko,
+    alamat: r.alamat || '',
+    sisaSaatTanda: r.sisaRiil,
+    jumlahDiterima: Math.round(jumlahDiterima),
+    ditandaiOleh: namaStaf,
+    tglDitandai: new Date().toISOString(),
+    catatan: catatan,
+    status: 'pending',
+    diverifikasiOleh: null,
+    tglVerifikasi: null,
+    catatanVerifikasi: null
+  };
+
+  tandaList.push(item);
+  await saveTandaLocal(item);
+  cloudPushTanda(item);
+
+  closeAksiFakturModal();
+  render();
+  showToast(`Faktur ${item.noFaktur} ditandai sudah bayar. Menunggu verifikasi akuntan.`, 'success');
+});
+
+async function batalkanTanda(id){
+  const item = tandaList.find(t => t.id === id);
+  if (!item) return;
+  if (!confirm(`Batalkan tanda "sudah bayar" untuk faktur ${item.noFaktur}?`)) return;
+
+  tandaList = tandaList.filter(t => t.id !== id);
+  await deleteTandaLocal(id);
+  cloudDeleteTanda(id);
+
+  closeAksiFakturModal();
+  render();
+  showToast('Tanda dibatalkan.', 'success');
+}
+
+// ---- Verifikasi oleh staf akuntan (tab UANG MASUK) ----
+
+async function verifikasiTanda(id){
+  const item = tandaList.find(t => t.id === id);
+  if (!item || item.status !== 'pending') return;
+
+  let slotKey = null;
+  if (state.A && state.A.label === item.sumber) slotKey = 'A';
+  else if (state.B && state.B.label === item.sumber) slotKey = 'B';
+  if (!slotKey){
+    alert('Data sumber tidak ditemukan (mungkin data sudah berubah). Tidak bisa memverifikasi otomatis.');
+    return;
+  }
+  const row = state[slotKey].rows.find(rr => String(rr.noFaktur) === String(item.noFaktur));
+  if (!row){
+    alert('Faktur ini tidak ditemukan lagi di data asli (mungkin sudah dihapus/diubah).');
+    return;
+  }
+
+  const ok = confirm(
+    `Verifikasi pembayaran faktur ${item.noFaktur} (${item.toko})?\n\n` +
+    `Ditandai oleh: ${item.ditandaiOleh}\n` +
+    `Jumlah diterima: ${fmtRp(item.jumlahDiterima)}\n` +
+    `Sisa saat ini di data asli: ${fmtRp(row.sisaRiil)}\n\n` +
+    `Jika OK, data ASLI akan diperbarui (Sudah Dibayar bertambah, status dihitung ulang).`
+  );
+  if (!ok) return;
+
+  let namaAkuntan = '';
+  try { namaAkuntan = localStorage.getItem('lastAkuntanName') || ''; } catch(e){}
+  namaAkuntan = (prompt('Nama staf akuntan yang memverifikasi:', namaAkuntan) || '').trim();
+  if (!namaAkuntan){
+    alert('Verifikasi dibatalkan: nama staf akuntan wajib diisi.');
+    return;
+  }
+  try { localStorage.setItem('lastAkuntanName', namaAkuntan); } catch(e){}
+
+  const tambah = Math.max(0, Number(item.jumlahDiterima) || 0);
+  row.totalPayment = Math.min((Number(row.totalPayment) || 0) + tambah, row.saldoAwal);
+  row.sisaRiil = Math.max(row.saldoAwal - row.totalPayment, 0);
+  row.kategori = kategoriBaris(null, row.totalPayment, row.sisaRiil);
+  if (row.sisaRiil <= 0 && !row.tglPelunasan){
+    row.tglPelunasan = dateToExcelSerial(todayInputDate());
+  }
+  state[slotKey].ts = new Date();
+  await saveStateToStorage();
+
+  item.status = 'verified';
+  item.diverifikasiOleh = namaAkuntan;
+  item.tglVerifikasi = new Date().toISOString();
+  await saveTandaLocal(item);
+  cloudPushTanda(item);
+
+  updateUploadStatus();
+  rebuildSumberFilter();
+  rebuildSalesFilter();
+  render();
+  showToast(`Faktur ${item.noFaktur} terverifikasi, data asli diperbarui.`, 'success');
+}
+
+async function tolakTanda(id){
+  const item = tandaList.find(t => t.id === id);
+  if (!item || item.status !== 'pending') return;
+
+  const alasan = (prompt(`Alasan penolakan tanda faktur ${item.noFaktur} (opsional):`, '') || '').trim();
+  if (!confirm(`Tolak tanda "sudah bayar" untuk faktur ${item.noFaktur}? Data asli TIDAK akan diubah.`)) return;
+
+  item.status = 'rejected';
+  item.catatanVerifikasi = alasan;
+  item.tglVerifikasi = new Date().toISOString();
+  await saveTandaLocal(item);
+  cloudPushTanda(item);
+
+  render();
+  showToast('Tanda ditolak.', 'error');
+}
+
+let umSubtab = 'pending';
+
+function renderUangMasuk(){
+  const counts = { pending:0, verified:0, rejected:0 };
+  tandaList.forEach(t => { if (counts[t.status] !== undefined) counts[t.status]++; });
+
+  const subtabDefs = [
+    { key:'pending', label:'Menunggu Verifikasi' },
+    { key:'verified', label:'Terverifikasi' },
+    { key:'rejected', label:'Ditolak' }
+  ];
+  const subtabsEl = document.getElementById('umSubtabs');
+  subtabsEl.innerHTML = subtabDefs.map(s => {
+    const active = s.key === umSubtab ? 'active' : '';
+    return `<button type="button" class="ringkasan-subtab ${active}" data-sub="${s.key}">${escapeHtml(s.label)}<span class="ringkasan-count">${counts[s.key]||0}</span></button>`;
+  }).join('');
+  subtabsEl.querySelectorAll('.ringkasan-subtab').forEach(btn => {
+    btn.addEventListener('click', () => { umSubtab = btn.dataset.sub; render(); });
+  });
+
+  document.getElementById('umDate').textContent = `data tgl : ${todayStr()}`;
+
+  const rowsCat = tandaList
+    .filter(t => t.status === umSubtab)
+    .slice()
+    .sort((a, b) => new Date(b.tglDitandai) - new Date(a.tglDitandai));
+
+  const tbody = document.getElementById('umTbody');
+  const emptyEl = document.getElementById('umEmpty');
+  const tableWrapEl = document.querySelector('#uangMasukView .ringkasan-tablewrap');
+  const footEl = document.getElementById('umFoot');
+
+  updateUangMasukBadge();
+
+  if (rowsCat.length === 0){
+    tbody.innerHTML = '';
+    tableWrapEl.style.display = 'none';
+    emptyEl.style.display = 'block';
+    footEl.textContent = '';
+    return;
+  }
+  tableWrapEl.style.display = '';
+  emptyEl.style.display = 'none';
+
+  tbody.innerHTML = rowsCat.map((t, idx) => {
+    const tglTanda = t.tglDitandai ? new Date(t.tglDitandai).toLocaleDateString('id-ID') : '-';
+    let statusCell = '';
+    let aksiCell = '';
+    if (t.status === 'pending'){
+      statusCell = `<span class="um-status pending">Menunggu</span>`;
+      aksiCell = `
+        <div class="um-actions">
+          <button type="button" class="btn-verify" data-verify="${t.id}">✅ Verifikasi</button>
+          <button type="button" class="btn-reject" data-reject="${t.id}">❌ Tolak</button>
+        </div>`;
+    } else if (t.status === 'verified'){
+      statusCell = `<span class="um-status verified">Terverifikasi</span>`;
+      aksiCell = `<div class="um-sub">oleh ${escapeHtml(t.diverifikasiOleh||'-')}<br>${t.tglVerifikasi ? new Date(t.tglVerifikasi).toLocaleString('id-ID') : ''}</div>`;
+    } else {
+      statusCell = `<span class="um-status rejected">Ditolak</span>`;
+      aksiCell = `<div class="um-sub">${t.catatanVerifikasi ? escapeHtml(t.catatanVerifikasi) : '-'}</div>`;
+    }
+    return `
+    <tr>
+      <td>${idx + 1}</td>
+      <td>${tglTanda}</td>
+      <td>${escapeHtml(t.sumber)}</td>
+      <td>${escapeHtml(String(t.noFaktur))}</td>
+      <td class="rk-toko">${escapeHtml(t.toko)}</td>
+      <td class="num">${Math.round(t.sisaSaatTanda).toLocaleString('id-ID')}</td>
+      <td class="num">${Math.round(t.jumlahDiterima).toLocaleString('id-ID')}</td>
+      <td>${escapeHtml(t.ditandaiOleh)}</td>
+      <td>${statusCell}</td>
+      <td>${aksiCell}</td>
+    </tr>`;
+  }).join('');
+
+  tbody.querySelectorAll('[data-verify]').forEach(btn => {
+    btn.addEventListener('click', () => verifikasiTanda(btn.dataset.verify));
+  });
+  tbody.querySelectorAll('[data-reject]').forEach(btn => {
+    btn.addEventListener('click', () => tolakTanda(btn.dataset.reject));
+  });
+
+  footEl.textContent = `Total ${rowsCat.length} data pada kategori ini.`;
+}
+
+// ============================================================
 //  RENDER
 // ============================================================
 function render(){
+  updateUangMasukBadge();
   const rows = allRows();
   const belum = rows.filter(r=>r.kategori==='belum');
   const titip = rows.filter(r=>r.kategori==='titip');
@@ -2504,9 +3069,11 @@ function render(){
   }
 
   const isRingkasan = activeCat === 'ringkasan';
-  document.querySelector('.controls').style.display = isRingkasan ? 'none' : '';
+  const isUangMasuk = activeCat === 'uangmasuk';
+  document.querySelector('.controls').style.display = (isRingkasan || isUangMasuk) ? 'none' : '';
   document.getElementById('ringkasanView').style.display = isRingkasan ? '' : 'none';
-  if (isRingkasan){
+  document.getElementById('uangMasukView').style.display = isUangMasuk ? '' : 'none';
+  if (isRingkasan || isUangMasuk){
     periodeEl.style.display = 'none';
     document.getElementById('tableWrap').style.display = 'none';
     document.getElementById('cardView').style.display = 'none';
@@ -2541,6 +3108,10 @@ function render(){
 
   if (isRingkasan){
     renderRingkasan(belum);
+    return;
+  }
+  if (isUangMasuk){
+    renderUangMasuk();
     return;
   }
 
@@ -2785,19 +3356,23 @@ document.getElementById('inputForm').addEventListener('submit', async function(e
   initSupabase();
   // 1) Muat cache lokal dulu supaya tampilan langsung terisi (cepat & tetap jalan offline)
   await loadStateFromStorage();
+  await loadTandaFromStorage();
   updateUploadStatus();
   rebuildSumberFilter();
   rebuildSalesFilter();
   render();
   // 2) Tarik data terbaru dari cloud (kalau ada device lain yang update duluan)
   await cloudPullAll({ silent: true });
+  await cloudPullTandaAll({ silent: true });
   // 3) Dengarkan perubahan real-time dari device lain
   subscribeRealtime();
+  subscribeRealtimeTanda();
 })();
 
 // Saat koneksi internet kembali, langsung sinkron ulang
 window.addEventListener('online', () => {
   cloudPullAll({ silent: true });
+  cloudPullTandaAll({ silent: true });
 });
 
 // ========== REGISTER SERVICE WORKER ==========
