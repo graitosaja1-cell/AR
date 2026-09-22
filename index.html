@@ -18,6 +18,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600;14..32,700;14..32,800&family=IBM+Plex+Mono:wght@400;500;600;700&family=Special+Elite&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <style>
   :root {
     --bg-color: #f8fafc;
@@ -244,6 +245,18 @@
     color: var(--accent-cyan);
     font-weight: 600;
     letter-spacing: 0.03em;
+  }
+  .upload-status .db-badge.cloud-on {
+    background: rgba(5, 150, 105, 0.15);
+    color: var(--green);
+  }
+  .upload-status .db-badge.cloud-off {
+    background: rgba(220, 38, 38, 0.12);
+    color: var(--red);
+  }
+  .upload-status .db-badge.cloud-syncing {
+    background: rgba(234, 88, 12, 0.15);
+    color: var(--amber);
   }
 
   /* ---------- TOTALS ---------- */
@@ -794,6 +807,10 @@
               <span>✏️ Input AR Rupa‑rupa</span>
             </div>
             <div class="menu-divider"></div>
+            <div class="menu-item" id="syncNowBtn" role="button">
+              <span>☁️ Sinkronkan Sekarang</span>
+            </div>
+            <div class="menu-divider"></div>
             <div class="menu-item" id="backupBtn" role="button">
               <span>💾 Backup Data (.json)</span>
             </div>
@@ -1060,6 +1077,138 @@ async function idbClear(store){
     req.onsuccess = () => resolve();
     req.onerror = () => reject(req.error);
   });
+}
+
+// ============================================================
+//  SUPABASE CLOUD SYNC (agar data ter-update di semua device)
+// ============================================================
+const SUPABASE_URL = 'https://bgirwwqozezibrwghtla.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_iRCAzy0QB7QO8OMAG-dV_Q_2IwvX1Kl';
+const SUPABASE_TABLE = 'piutang_slots';
+
+let supabaseClient = null;
+let cloudOnline = false;
+let cloudSyncing = false;
+let realtimeChannel = null;
+
+function initSupabase(){
+  try {
+    if (window.supabase && typeof window.supabase.createClient === 'function'){
+      supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    }
+  } catch(e){
+    console.error('Gagal inisialisasi Supabase:', e);
+    supabaseClient = null;
+  }
+}
+
+// Kirim satu slot (A/B) ke cloud. Dipanggil tiap kali data lokal berubah.
+async function cloudPushSlot(key){
+  if (!supabaseClient) return;
+  cloudSyncing = true;
+  updateUploadStatus();
+  try {
+    const data = state[key];
+    if (data){
+      const { error } = await supabaseClient
+        .from(SUPABASE_TABLE)
+        .upsert({
+          key: key,
+          filename: data.filename,
+          label: data.label,
+          rows: data.rows,
+          ts: data.ts.toISOString(),
+          updated_at: new Date().toISOString()
+        }, { onConflict: 'key' });
+      if (error) throw error;
+    } else {
+      const { error } = await supabaseClient.from(SUPABASE_TABLE).delete().eq('key', key);
+      if (error) throw error;
+    }
+    cloudOnline = true;
+  } catch(e){
+    console.error(`Gagal sinkron slot ${key} ke cloud:`, e);
+    cloudOnline = false;
+  } finally {
+    cloudSyncing = false;
+    updateUploadStatus();
+  }
+}
+
+// Tarik semua slot dari cloud & timpa state lokal + cache IndexedDB.
+// Dipanggil saat aplikasi dibuka dan saat ada perubahan real-time dari device lain.
+async function cloudPullAll(opts){
+  opts = opts || {};
+  if (!supabaseClient) return;
+  cloudSyncing = true;
+  updateUploadStatus();
+  try {
+    const { data, error } = await supabaseClient.from(SUPABASE_TABLE).select('*');
+    if (error) throw error;
+    cloudOnline = true;
+
+    const seen = new Set();
+    (data || []).forEach(row => {
+      if (row.key !== 'A' && row.key !== 'B') return;
+      seen.add(row.key);
+      state[row.key] = {
+        filename: row.filename,
+        label: row.label,
+        rows: row.rows || [],
+        ts: row.ts ? new Date(row.ts) : new Date()
+      };
+    });
+    ['A','B'].forEach(k => { if (!seen.has(k)) state[k] = null; });
+
+    // Simpan salinan ke IndexedDB supaya tetap bisa dibuka offline
+    for (const k of ['A','B']){
+      if (state[k]){
+        await idbPut(STORE_SLOTS, {
+          key: k,
+          filename: state[k].filename,
+          label: state[k].label,
+          rows: state[k].rows,
+          ts: state[k].ts.toISOString()
+        });
+      } else {
+        await idbDelete(STORE_SLOTS, k);
+      }
+    }
+
+    updateUploadStatus();
+    rebuildSumberFilter();
+    rebuildSalesFilter();
+    render();
+    if (!opts.silent) showToast('Data tersinkron dari cloud.', 'success');
+  } catch(e){
+    console.error('Gagal mengambil data dari cloud:', e);
+    cloudOnline = false;
+    updateUploadStatus();
+    if (!opts.silent) showToast('Gagal sinkron dari cloud (cek koneksi internet).', 'error');
+  } finally {
+    cloudSyncing = false;
+    updateUploadStatus();
+  }
+}
+
+// Dengarkan perubahan real-time dari device lain, lalu tarik ulang data otomatis.
+function subscribeRealtime(){
+  if (!supabaseClient || realtimeChannel) return;
+  try {
+    realtimeChannel = supabaseClient
+      .channel('piutang_slots_changes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: SUPABASE_TABLE }, () => {
+        cloudPullAll({ silent: true });
+      })
+      .subscribe((status) => {
+        if (status === 'SUBSCRIBED'){
+          cloudOnline = true;
+          updateUploadStatus();
+        }
+      });
+  } catch(e){
+    console.error('Gagal berlangganan realtime:', e);
+  }
 }
 
 // ============================================================
@@ -1357,6 +1506,11 @@ async function saveStateToStorage(){
     console.error('Gagal menyimpan ke IndexedDB:', e);
     showToast('Gagal menyimpan data ke IndexedDB.', 'error');
   }
+
+  // Sinkronkan ke cloud (Supabase) agar langsung ter-update di device lain.
+  // Tidak di-"await" biar UI tetap responsif meski koneksi lambat.
+  cloudPushSlot('A');
+  cloudPushSlot('B');
 }
 
 async function loadStateFromStorage(){
@@ -1623,6 +1777,8 @@ async function clearAllData(){
   } catch(e){
     console.error('Gagal menghapus IndexedDB:', e);
   }
+  cloudPushSlot('A');
+  cloudPushSlot('B');
   updateUploadStatus();
   rebuildSumberFilter();
   rebuildSalesFilter();
@@ -1642,11 +1798,19 @@ function updateUploadStatus(){
       parts.push(`<span class="ok">${escapeHtml(data.label)}</span>: <span class="file-count">${data.rows.length}</span> faktur`);
     }
   });
-  const dbBadge = `<span class="db-badge" title="Data tersimpan di IndexedDB (lokal)">IndexedDB</span>`;
-  if (parts.length === 0){
-    el.innerHTML = dbBadge + '<span>Belum ada file diupload.</span>';
+  const dbBadge = `<span class="db-badge" title="Cache lokal di device ini (IndexedDB)">Lokal</span>`;
+  let cloudBadge;
+  if (cloudSyncing){
+    cloudBadge = `<span class="db-badge cloud-syncing" title="Sedang menyinkronkan ke cloud...">☁ Sync…</span>`;
+  } else if (cloudOnline){
+    cloudBadge = `<span class="db-badge cloud-on" title="Tersambung ke cloud - data ter-update otomatis di semua device">☁ Online</span>`;
   } else {
-    el.innerHTML = dbBadge + '<span>' + parts.join(' - ') + '</span>';
+    cloudBadge = `<span class="db-badge cloud-off" title="Tidak tersambung ke cloud - perubahan hanya tersimpan lokal di device ini">☁ Offline</span>`;
+  }
+  if (parts.length === 0){
+    el.innerHTML = dbBadge + cloudBadge + '<span>Belum ada file diupload.</span>';
+  } else {
+    el.innerHTML = dbBadge + cloudBadge + '<span>' + parts.join(' - ') + '</span>';
   }
 }
 
@@ -1683,6 +1847,14 @@ document.getElementById('fileB').addEventListener('change', function(e){
   closeMenuDropdown();
   if (this.files[0]) handleFile('B', this.files[0]);
   this.value = '';
+});
+
+// ============================================================
+//  WIRING SYNC MANUAL
+// ============================================================
+document.getElementById('syncNowBtn').addEventListener('click', function(){
+  closeMenuDropdown();
+  cloudPullAll({ silent: false });
 });
 
 // ============================================================
@@ -2177,12 +2349,23 @@ document.getElementById('inputForm').addEventListener('submit', async function(e
 //  INIT (async — tunggu load dari IndexedDB selesai)
 // ============================================================
 (async function init(){
+  initSupabase();
+  // 1) Muat cache lokal dulu supaya tampilan langsung terisi (cepat & tetap jalan offline)
   await loadStateFromStorage();
   updateUploadStatus();
   rebuildSumberFilter();
   rebuildSalesFilter();
   render();
+  // 2) Tarik data terbaru dari cloud (kalau ada device lain yang update duluan)
+  await cloudPullAll({ silent: true });
+  // 3) Dengarkan perubahan real-time dari device lain
+  subscribeRealtime();
 })();
+
+// Saat koneksi internet kembali, langsung sinkron ulang
+window.addEventListener('online', () => {
+  cloudPullAll({ silent: true });
+});
 
 // ========== REGISTER SERVICE WORKER ==========
 if ('serviceWorker' in navigator) {

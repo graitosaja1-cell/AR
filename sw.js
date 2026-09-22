@@ -1,5 +1,5 @@
 // Service Worker - Buku Piutang Harian (AR Minyak)
-const CACHE_NAME = 'ar-minyak-cache-v1';
+const CACHE_NAME = 'ar-minyak-cache-v2';
 const CORE_ASSETS = [
   './',
   './index.html',
