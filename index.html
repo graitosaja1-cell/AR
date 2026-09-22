@@ -1,0 +1,2195 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Buku Piutang Harian</title>
+
+<!-- PWA -->
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0b1120">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="AR Minyak">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+<link rel="icon" type="image/png" sizes="512x512" href="icon-512.png">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600;14..32,700;14..32,800&family=IBM+Plex+Mono:wght@400;500;600;700&family=Special+Elite&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+  :root {
+    --bg-color: #f8fafc;
+    --bg-gradient: radial-gradient(circle at top right, rgba(6, 182, 212, 0.08), transparent 300px);
+    --card-bg: rgba(255, 255, 255, 0.9);
+    --text-main: #1e293b;
+    --text-muted: #64748b;
+    --border-color: rgba(0, 0, 0, 0.08);
+    --hover-bg: rgba(0, 0, 0, 0.02);
+    --table-border: rgba(0, 0, 0, 0.05);
+    --shadow: 0 4px 16px 0 rgba(0, 0, 0, 0.05);
+    --thead-bg: #f1f5f9;
+
+    --accent-cyan: #06b6d4;
+    --navy: #0f172a;
+    --red: #dc2626;
+    --amber: #ea580c;
+    --green: #059669;
+
+    --blue-main: #2563eb;
+    --blue-shadow: rgba(0, 0, 0, 0.15);
+    --blue-highlight: rgba(255, 255, 255, 0.9);
+    --red-emboss-shadow: rgba(0, 0, 0, 0.15);
+    --red-emboss-highlight: rgba(255, 255, 255, 0.9);
+    --orange-emboss-shadow: rgba(0, 0, 0, 0.15);
+    --orange-emboss-highlight: rgba(255, 255, 255, 0.9);
+  }
+
+  [data-theme="dark"] {
+    --bg-color: #0b1120;
+    --bg-gradient: radial-gradient(circle at top right, rgba(6, 182, 212, 0.1), transparent 300px);
+    --card-bg: rgba(30, 41, 59, 0.7);
+    --text-main: #f8fafc;
+    --text-muted: #94a3b8;
+    --border-color: rgba(255, 255, 255, 0.1);
+    --hover-bg: rgba(255, 255, 255, 0.04);
+    --table-border: rgba(255, 255, 255, 0.04);
+    --shadow: 0 4px 16px 0 rgba(0, 0, 0, 0.2);
+    --thead-bg: #1e293b;
+
+    --navy: #10171C;
+    --red: #ef4444;
+    --amber: #f97316;
+    --green: #10b981;
+
+    --blue-main: #3b82f6;
+    --blue-shadow: rgba(0, 0, 0, 0.4);
+    --blue-highlight: rgba(255, 255, 255, 0.8);
+    --red-emboss-shadow: rgba(0, 0, 0, 0.5);
+    --red-emboss-highlight: rgba(255, 255, 255, 0.4);
+    --orange-emboss-shadow: rgba(0, 0, 0, 0.5);
+    --orange-emboss-highlight: rgba(255, 255, 255, 0.4);
+  }
+
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background-color: var(--bg-color);
+    background-image: var(--bg-gradient);
+    color: var(--text-main);
+    font-family:'Inter', 'IBM Plex Sans', sans-serif;
+    min-height:100vh;
+    padding:12px 16px 60px;
+    transition: background-color 0.3s ease, color 0.3s ease;
+  }
+  .wrap{max-width:100%;margin:0 auto;}
+
+  /* ---------- HEADER ---------- */
+  .cover {
+    background: transparent;
+    border: none;
+    border-radius: 0;
+    padding: 0;
+    margin-bottom: 2px;
+    box-shadow: none;
+    position: relative;
+  }
+  .cover-inner {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 6px 12px;
+  }
+  .cover-left {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    flex-wrap: wrap;
+    min-width: 0;
+  }
+  .cover-left .header-title {
+    font-weight: 700;
+    font-size: 12px;
+    letter-spacing: 0.02em;
+    color: var(--text-main);
+    line-height: 1.3;
+    white-space: nowrap;
+    text-transform: uppercase;
+  }
+  .cover-left .tanggal-hari-ini {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10.5px;
+    color: var(--text-muted);
+    white-space: nowrap;
+    line-height: 1.3;
+    position: relative;
+    padding-left: 10px;
+  }
+  .cover-left .tanggal-hari-ini::before {
+    content: "·";
+    position: absolute;
+    left: 2px;
+    color: var(--text-muted);
+  }
+  .cover-right {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 8px;
+    flex-wrap: wrap;
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+  .menu-wrap { position: relative; flex: 0 0 auto; }
+  .btn-menu {
+    font-family: 'Inter', sans-serif;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-main);
+    background: var(--card-bg);
+    padding: 5px 11px;
+    border-radius: 6px;
+    border: 1px solid var(--border-color);
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+    line-height: 1.4;
+  }
+  .btn-menu:hover, .btn-menu.active {
+    background: var(--hover-bg);
+    border-color: var(--accent-cyan);
+  }
+  .btn-icon {
+    font-size: 13px;
+    background: var(--card-bg);
+    border: 1px solid var(--border-color);
+    color: var(--text-main);
+    width: 26px; height: 26px; min-width: 26px;
+    border-radius: 6px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+    line-height: 1;
+    padding: 0;
+  }
+  .btn-icon:hover {
+    background: var(--hover-bg);
+    border-color: var(--accent-cyan);
+  }
+  .menu-dropdown {
+    display: none;
+    position: absolute;
+    top: calc(100% + 6px);
+    right: 0;
+    background: var(--card-bg);
+    backdrop-filter: blur(12px);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    box-shadow: var(--shadow);
+    padding: 6px;
+    min-width: 220px;
+    z-index: 20;
+  }
+  .menu-dropdown.show { display: block; }
+  .menu-item {
+    font-family: 'Inter', sans-serif;
+    font-size: 12px;
+    font-weight: 500;
+    padding: 8px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    color: var(--text-main);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    transition: background 0.15s ease;
+    white-space: nowrap;
+  }
+  .menu-item:hover { background: var(--hover-bg); }
+  .menu-item input { display: none; }
+  .menu-item.danger { color: var(--red); }
+  .menu-item.danger:hover { background: rgba(220, 60, 60, 0.12); }
+  .menu-divider {
+    height: 1px;
+    background: var(--border-color);
+    margin: 4px 6px;
+  }
+
+  .upload-status {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    color: var(--text-muted);
+    white-space: nowrap;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    line-height: 1.3;
+  }
+  .upload-status .ok { color: var(--green); }
+  .upload-status .file-count { font-weight: 600; color: var(--text-main); }
+  .upload-status .db-badge {
+    font-size: 9px;
+    padding: 1px 6px;
+    border-radius: 8px;
+    background: rgba(6, 182, 212, 0.15);
+    color: var(--accent-cyan);
+    font-weight: 600;
+    letter-spacing: 0.03em;
+  }
+
+  /* ---------- TOTALS ---------- */
+  .totals{
+    display:grid;
+    grid-template-columns:repeat(4,minmax(0,1fr));
+    gap:10px;
+    margin-bottom:12px;
+  }
+  @media (max-width:820px){ .totals{grid-template-columns:1fr 1fr;} }
+  @media (max-width:480px){ .totals{grid-template-columns:1fr;} }
+
+  .tcell{
+    background: var(--card-bg);
+    backdrop-filter: blur(8px);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 10px 12px;
+    box-shadow: var(--shadow);
+    transition: transform 0.2s ease, border-color 0.2s ease;
+    min-width:0;
+  }
+  .tcell:hover {
+    transform: translateY(-2px);
+    border-color: rgba(6, 182, 212, 0.4);
+  }
+
+  .tcell-top{
+    display:flex;
+    justify-content:space-between;
+    align-items:baseline;
+    gap:8px;
+    flex-wrap:wrap;
+  }
+  .tcell-top .label{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:10px;
+    letter-spacing:.06em;
+    text-transform:uppercase;
+    color:var(--text-muted);
+    white-space:nowrap;
+  }
+  .tcell-top .value{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:16px;
+    font-weight:700;
+    white-space:nowrap;
+    line-height:1.15;
+    letter-spacing:-0.01em;
+  }
+  .tcell .sub{
+    font-size:10px;
+    color:var(--text-muted);
+    margin-top:4px;
+    line-height:1.3;
+  }
+  .tcell .sub-breakdown{
+    font-size:10px;
+    color:var(--text-muted);
+    font-family:'IBM Plex Mono',monospace;
+    font-style:italic;
+    margin-top:2px;
+    line-height:1.3;
+  }
+  .tcell .sub-breakdown:empty{ display:none; }
+
+  .tcell.red .value{color:var(--red);}
+  .tcell.amber .value{color:var(--amber);}
+  .tcell.green .value{color:var(--green);}
+  .tcell.navy .value{color:var(--accent-cyan);}
+
+  /* ---------- Controls ---------- */
+  .controls{
+    display:flex; gap:8px; flex-wrap:wrap; align-items:center;
+    margin-bottom:12px;
+  }
+  .tabbtn{
+    font-family:'IBM Plex Mono',monospace; font-size:11px; font-weight: 600;
+    padding:6px 12px; border:1px solid var(--border-color); background:var(--card-bg);
+    border-radius:6px; cursor:pointer; color:var(--text-main);
+    line-height:1.4; transition: all 0.2s ease;
+  }
+  .tabbtn:hover { background: var(--hover-bg); }
+  .tabbtn.active{background:var(--accent-cyan); border-color:var(--accent-cyan); color:#fff;}
+  .tabbtn[data-cat="belum"].active{background:var(--red); border-color:var(--red); color:#fff;}
+  .tabbtn[data-cat="titip"].active{background:var(--amber); border-color:var(--amber); color:#fff;}
+  .tabbtn[data-cat="lunas"].active{background:var(--green); border-color:var(--green); color:#fff;}
+
+  .searchbox{
+    flex:1; min-width:180px;
+    font-family:'Inter', sans-serif;
+    font-size:11px;
+    padding:6px 12px; border:1px solid var(--border-color); border-radius:999px;
+    background:var(--card-bg); color:var(--text-main);
+    line-height:1.3; outline: none;
+  }
+  .searchbox::placeholder { color: var(--text-muted); }
+  .searchbox:focus { border-color: var(--accent-cyan); }
+
+  select.sumberfilter{
+    font-family:'Inter', sans-serif;
+    font-size:11px;
+    padding:6px 24px 6px 12px; border:1px solid var(--border-color); border-radius:6px;
+    background:var(--card-bg); color:var(--text-main);
+    line-height:1.3; outline: none; cursor: pointer;
+    appearance: none;
+    background-image: url("data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%2394a3b8%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E");
+    background-repeat: no-repeat;
+    background-position: right 8px center;
+    background-size: 8px;
+  }
+  select.sumberfilter:focus { border-color: var(--accent-cyan); }
+
+  .periode-info{
+    font-size:11px; color:var(--text-muted); font-family:'IBM Plex Mono',monospace;
+    margin-bottom:8px; line-height:1.3;
+  }
+  .print-only{display:none;}
+
+  /* ---------- VIEW TOGGLE ---------- */
+  .view-toggle {
+    display: inline-flex;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    background: var(--card-bg);
+    padding: 2px;
+    gap: 2px;
+    flex: 0 0 auto;
+  }
+  .viewbtn {
+    font-family: 'Inter', sans-serif;
+    font-size: 13px;
+    width: 30px;
+    height: 24px;
+    border: none;
+    background: transparent;
+    color: var(--text-main);
+    border-radius: 4px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.15s ease;
+    padding: 0;
+    line-height: 1;
+  }
+  .viewbtn:hover { background: var(--hover-bg); }
+  .viewbtn.active {
+    background: var(--accent-cyan);
+    color: #fff;
+  }
+
+  /* ---------- GEAR ---------- */
+  .settings-wrap{
+    position: relative; flex: 0 0 auto; margin-left: auto;
+  }
+  .btn-gear{
+    font-family:'Inter', sans-serif; font-size: 14px; line-height: 1;
+    width: 28px; height: 28px; min-width: 28px; padding: 0;
+    border: 1px solid var(--border-color); background: var(--card-bg);
+    color: var(--text-main); border-radius: 6px; cursor: pointer;
+    display: inline-flex; align-items: center; justify-content: center;
+    transition: transform 0.3s ease, background 0.15s ease, color 0.15s ease;
+  }
+  .btn-gear:hover, .btn-gear.active{
+    background: var(--accent-cyan); color: #fff; border-color: var(--accent-cyan);
+  }
+  .btn-gear.active{ transform: rotate(60deg); }
+
+  .settings-dropdown{
+    display: none; position: absolute; top: calc(100% + 6px); right: 0;
+    background: var(--card-bg); backdrop-filter: blur(12px);
+    border: 1px solid var(--border-color); border-radius: 8px;
+    box-shadow: var(--shadow); padding: 12px; min-width: 200px; z-index: 30;
+  }
+  .settings-dropdown.show{ display: block; }
+  .settings-item{
+    display: flex; flex-direction: column; gap: 6px; margin-bottom: 12px;
+  }
+  .settings-item:last-child{ margin-bottom: 0; }
+  .settings-item > label{
+    font-family:'IBM Plex Mono',monospace; font-size: 10px;
+    letter-spacing: .06em; text-transform: uppercase; color: var(--text-muted); white-space: nowrap;
+  }
+  .settings-item input.umur-input{
+    width: 100%; max-width: none; font-family:'Inter', sans-serif; font-size: 12px;
+    padding: 6px 10px; border: 1px solid var(--border-color); border-radius: 6px;
+    background: var(--bg-color); color: var(--text-main); outline: none;
+  }
+  .settings-item input.umur-input:focus { border-color: var(--accent-cyan); }
+  .settings-item button.btn-cetak{
+    width: 100%; font-family:'Inter', sans-serif; font-size: 12px; font-weight: 600;
+    padding: 8px 10px; border: 1px solid var(--accent-cyan); background: var(--accent-cyan);
+    color: #fff; border-radius: 6px; cursor: pointer;
+    display: inline-flex; align-items: center; justify-content: center; gap: 6px; line-height: 1.4;
+  }
+  .settings-item button.btn-cetak:hover{ background: #0891b2; border-color: #0891b2; }
+  .settings-hint{ font-size: 10px; color: var(--text-muted); font-family: 'IBM Plex Mono', monospace; line-height: 1.3; margin-top: -2px; }
+
+  @media print{
+    body{background:#fff; padding:0; color: #000;}
+    .cover, .periode-info, .controls, .totals{display:none !important;}
+    .print-only{
+      display:block; margin-bottom:14px; padding-bottom:8px;
+      border-bottom:2px solid #000; font-family:'IBM Plex Mono',monospace; font-size:13px; line-height:1.6;
+    }
+    .tablewrap{max-height:none !important; border:none; overflow:visible; background: #fff; display: block !important;}
+    .cardview { display: none !important; }
+    table{font-size:11px;}
+    thead th{position:static; z-index:auto; background: #eee; color: #000;}
+    tbody td { border-bottom: 1px solid #ddd; color: #000; }
+    .stamp{transform:none; -webkit-print-color-adjust: exact; print-color-adjust: exact;}
+  }
+
+  /* ---------- TABLE ---------- */
+  .tablewrap{
+    background:var(--card-bg); backdrop-filter: blur(8px);
+    border:1px solid var(--border-color); border-radius: 8px;
+    overflow:auto; max-height:560px; box-shadow: var(--shadow);
+    position: relative;
+  }
+  table{width:100%; border-collapse:collapse; font-size:11.5px;}
+
+  thead th{
+    position:sticky; top:0;
+    z-index: 10;
+    background: var(--thead-bg);
+    color: var(--text-main);
+    font-family:'IBM Plex Mono',monospace; font-weight:600; font-size:10px; letter-spacing:.03em; text-transform:uppercase;
+    text-align:left; padding:8px 10px; white-space:nowrap;
+    border-bottom: 1px solid var(--border-color);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+  }
+  [data-theme="dark"] thead th {
+    box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+  }
+
+  tbody td{
+    padding:8px 10px; border-bottom:1px solid var(--table-border);
+    white-space:nowrap;
+  }
+  tbody tr:nth-child(even){background:rgba(143,166,184,0.05);}
+  tbody tr:hover{background:var(--hover-bg);}
+  td.num, th.num{font-family:'IBM Plex Mono',monospace; text-align:right;}
+  td.toko{white-space:normal; max-width:170px;}
+  .colUmur{display:none;}
+  table.show-umur .colUmur{display:table-cell;}
+  table.show-umur .colDibayar{display:none;}
+  .colPelunasan{display:none;}
+  table.show-lunas .colPelunasan{display:table-cell;}
+  td.umur-over{color:var(--red); font-weight:600;}
+  td.umur-soon{color:var(--amber); font-weight:600;}
+  td.umur-ok{color:var(--text-muted);}
+
+  /* ---------- CARD VIEW ---------- */
+  .cardview {
+    display: none;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 12px;
+    margin-bottom: 12px;
+  }
+  .cardview.show { display: grid; }
+
+  .invoice-card {
+    background: var(--card-bg);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    padding: 12px 14px;
+    box-shadow: var(--shadow);
+    transition: transform 0.2s ease, border-color 0.2s ease;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .invoice-card:hover {
+    transform: translateY(-2px);
+    border-color: rgba(6, 182, 212, 0.4);
+  }
+  .invoice-card .card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 8px;
+    padding-bottom: 8px;
+    border-bottom: 1px dashed var(--border-color);
+  }
+  .invoice-card .card-header > div:first-child {
+    min-width: 0;
+    flex: 1 1 auto;
+  }
+  .invoice-card .card-no {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 9.5px;
+    color: var(--text-muted);
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    line-height: 1.2;
+  }
+  .invoice-card .card-toko {
+    font-weight: 700;
+    font-size: 13px;
+    color: var(--text-main);
+    line-height: 1.3;
+    margin-top: 2px;
+    word-break: break-word;
+  }
+  .invoice-card .card-faktur {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    color: var(--text-muted);
+    margin-top: 1px;
+  }
+  .invoice-card .card-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px 12px;
+  }
+  .invoice-card .card-field {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    min-width: 0;
+  }
+  .invoice-card .field-label {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    line-height: 1.2;
+  }
+  .invoice-card .field-value {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11.5px;
+    font-weight: 600;
+    color: var(--text-main);
+    line-height: 1.3;
+    word-break: break-word;
+  }
+  .invoice-card .field-value.accent-green { color: var(--green); }
+  .invoice-card .field-value.accent-red { color: var(--red); }
+  .invoice-card .field-value.accent-amber { color: var(--amber); }
+  .invoice-card .field-value.umur-over { color: var(--red); font-weight: 600; }
+  .invoice-card .field-value.umur-soon { color: var(--amber); font-weight: 600; }
+  .invoice-card .field-value.umur-ok { color: var(--text-muted); }
+
+  .invoice-card .card-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-top: 8px;
+    border-top: 1px dashed var(--border-color);
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-top: auto;
+  }
+  .invoice-card .card-date {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 9.5px;
+    color: var(--text-muted);
+    line-height: 1.3;
+  }
+  .invoice-card .card-sumber {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 9.5px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+
+  /* ---------- STATUS EMBOS & STEMPEL ---------- */
+  .stamp{
+    display:inline-block;
+    font-family:'Special Elite', 'IBM Plex Mono', monospace;
+    font-size:10px; font-weight: 800; letter-spacing:.05em;
+    padding:2px 6px;
+    border-radius:4px;
+    text-transform: uppercase;
+    white-space: nowrap;
+    flex: 0 0 auto;
+  }
+  .stamp.lunas {
+    color: var(--blue-main);
+    border: 2px solid var(--blue-main);
+    transform: rotate(-6deg);
+    text-shadow: 1px 1px 1px var(--blue-shadow), -1px -1px 1px var(--blue-highlight);
+    box-shadow: inset 1px 1px 2px var(--blue-highlight), inset -1px -1px 2px var(--blue-shadow), 1px 1px 3px rgba(0,0,0,0.1);
+    background: transparent;
+  }
+  .stamp.belum {
+    color: var(--red);
+    border: none;
+    background: transparent;
+    padding: 2px 0;
+    text-shadow: 1px 1px 1px var(--red-emboss-shadow), -1px -1px 1px var(--red-emboss-highlight);
+  }
+  .stamp.titip {
+    color: var(--amber);
+    border: none;
+    background: transparent;
+    padding: 2px 0;
+    text-shadow: 1px 1px 1px var(--orange-emboss-shadow), -1px -1px 1px var(--orange-emboss-highlight);
+  }
+
+  .empty-state{
+    padding:50px 20px; text-align:center; color:var(--text-muted); font-size:13px;
+  }
+  .empty-state .big{font-family:'Special Elite',monospace; font-size:18px; color:var(--text-main); display:block; margin-bottom:6px;}
+
+  @media (max-width: 720px) {
+    body { padding: 8px 10px 50px; }
+    .cover-inner { flex-direction: column; align-items: stretch; gap: 8px; }
+    .cover-right { justify-content: space-between; }
+    .upload-status { justify-content: flex-start; }
+    .menu-dropdown { left: 0; right: 0; min-width: 0; }
+  }
+  @media (max-width: 480px) {
+    .cover-left .header-title { font-size: 11px; }
+    .cover-left .tanggal-hari-ini { font-size: 9.5px; }
+    .btn-menu { font-size: 10px; padding: 4px 10px; }
+    .upload-status { font-size: 9px; }
+    .btn-icon { width: 24px; height: 24px; min-width: 24px; font-size: 12px; }
+    .settings-wrap { margin-left: 0; }
+    .settings-dropdown { left: auto; right: 0; }
+    .cardview { grid-template-columns: 1fr; }
+  }
+
+  /* ---------- Modal Input Manual ---------- */
+  .modal-overlay {
+    display: none; position: fixed; inset: 0;
+    background: rgba(0,0,0,0.6); backdrop-filter: blur(4px);
+    z-index: 100; align-items: center; justify-content: center; padding: 16px;
+  }
+  .modal-overlay.show { display: flex; }
+  .modal-box {
+    background: var(--card-bg); border-radius: 12px;
+    box-shadow: 0 12px 40px rgba(0,0,0,0.3);
+    width: 100%; max-width: 520px; max-height: 92vh; overflow-y: auto;
+    border: 1px solid var(--border-color);
+  }
+  .modal-header {
+    background: var(--accent-cyan); color: #fff;
+    padding: 14px 18px; border-radius: 12px 12px 0 0;
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .modal-header h3 { margin: 0; font-size: 14px; font-weight: 600; font-family: 'Inter', sans-serif; }
+  .modal-close {
+    background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.3);
+    color: #fff; width: 26px; height: 26px; border-radius: 50%;
+    cursor: pointer; font-size: 15px; line-height: 1;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .modal-close:hover { background: rgba(255,255,255,0.4); }
+  .modal-body { padding: 16px 18px 20px; }
+  .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px 14px; }
+  .form-group { display: flex; flex-direction: column; gap: 4px; }
+  .form-group.full { grid-column: 1 / -1; }
+  .form-group label {
+    font-family: 'IBM Plex Mono', monospace; font-size: 10px;
+    letter-spacing: .06em; text-transform: uppercase; color: var(--text-muted);
+  }
+  .form-group input, .form-group select {
+    font-family: 'Inter', sans-serif; font-size: 12.5px;
+    padding: 8px 10px; border: 1px solid var(--border-color);
+    border-radius: 6px; background: var(--bg-color); color: var(--text-main); outline: none;
+  }
+  .form-group input:focus, .form-group select:focus { border-color: var(--accent-cyan); }
+  .form-actions {
+    display: flex; gap: 8px; justify-content: flex-end;
+    margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--border-color);
+  }
+  .btn-cancel {
+    font-family: 'Inter', sans-serif; font-size: 12.5px; padding: 8px 16px;
+    border: 1px solid var(--border-color); background: var(--card-bg);
+    border-radius: 6px; cursor: pointer; color: var(--text-main);
+  }
+  .btn-cancel:hover { background: var(--hover-bg); }
+  .btn-save {
+    font-family: 'Inter', sans-serif; font-size: 12.5px; font-weight: 600;
+    padding: 8px 18px; border: 1px solid var(--accent-cyan);
+    background: var(--accent-cyan); color: #fff; border-radius: 6px; cursor: pointer;
+  }
+  .btn-save:hover { background: #0891b2; border-color: #0891b2; }
+  .form-hint { font-size: 10.5px; color: var(--text-muted); margin-top: 2px; }
+  @media (max-width: 480px) { .form-grid { grid-template-columns: 1fr; } }
+
+  /* ---------- TOAST ---------- */
+  .toast {
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%) translateY(80px);
+    background: var(--navy);
+    color: #fff;
+    padding: 10px 18px;
+    border-radius: 8px;
+    font-family: 'Inter', sans-serif;
+    font-size: 12px;
+    font-weight: 500;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.25);
+    z-index: 9999;
+    opacity: 0;
+    transition: all 0.3s ease;
+    pointer-events: none;
+    max-width: 90vw;
+  }
+  .toast.show {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+  .toast.success { background: var(--green); }
+  .toast.error { background: var(--red); }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div id="printHeader" class="print-only"></div>
+
+  <!-- ===== HEADER ===== -->
+  <div class="cover">
+    <div class="cover-inner">
+      <div class="cover-left">
+        <div class="header-title">DATA AR MINYAK &amp; RUPA RUPA</div>
+        <div class="tanggal-hari-ini" id="tanggalHariIni"></div>
+      </div>
+      <div class="cover-right">
+        <div class="upload-status" id="uploadStatus"></div>
+        <button type="button" class="btn-icon" id="themeToggle" title="Mode Gelap / Terang" aria-label="Toggle dark mode">🌙</button>
+        <div class="menu-wrap" id="menuWrap">
+          <button type="button" class="btn-menu" id="menuToggle">⋮ Menu</button>
+          <div class="menu-dropdown" id="menuDropdown">
+            <label class="menu-item" id="uploadBtnA">
+              <span>📄 Upload Minyak</span>
+              <input type="file" accept=".xlsx" id="fileA">
+            </label>
+            <label class="menu-item" id="uploadBtnB">
+              <span>📄 Upload Rupa‑rupa</span>
+              <input type="file" accept=".xlsx" id="fileB">
+            </label>
+            <div class="menu-divider"></div>
+            <div class="menu-item" id="inputBtnA" role="button">
+              <span>✏️ Input AR Minyak</span>
+            </div>
+            <div class="menu-item" id="inputBtnB" role="button">
+              <span>✏️ Input AR Rupa‑rupa</span>
+            </div>
+            <div class="menu-divider"></div>
+            <div class="menu-item" id="backupBtn" role="button">
+              <span>💾 Backup Data (.json)</span>
+            </div>
+            <label class="menu-item" id="restoreBtn">
+              <span>📂 Restore Data (.json)</span>
+              <input type="file" accept=".json,application/json" id="restoreFile">
+            </label>
+            <div class="menu-divider"></div>
+            <div class="menu-item danger" id="clearAllBtn" role="button">
+              <span>🗑️ Hapus Semua Data</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== TOTALS ===== -->
+  <div class="totals" id="totalsRow">
+    <div class="tcell red">
+      <div class="tcell-top">
+        <span class="label">Belum Lunas</span>
+        <span class="value" id="totBelumNominal">Rp 0</span>
+      </div>
+      <div class="sub" id="totBelumCount">0 faktur</div>
+      <div class="sub-breakdown" id="totBelumBreakdown"></div>
+    </div>
+    <div class="tcell amber">
+      <div class="tcell-top">
+        <span class="label">Bayar Titip</span>
+        <span class="value" id="totTitipBayar">Rp 0</span>
+      </div>
+      <div class="sub" id="totTitipSisa">sisa Rp 0 &middot; 0 faktur</div>
+      <div class="sub-breakdown" id="totTitipBreakdown"></div>
+    </div>
+    <div class="tcell green">
+      <div class="tcell-top">
+        <span class="label">Sudah Lunas</span>
+        <span class="value" id="totLunasNominal">Rp 0</span>
+      </div>
+      <div class="sub" id="totLunasCount">0 faktur</div>
+      <div class="sub-breakdown" id="totLunasBreakdown"></div>
+    </div>
+    <div class="tcell navy">
+      <div class="tcell-top">
+        <span class="label">Total Diterima</span>
+        <span class="value" id="totDiterima">Rp 0</span>
+      </div>
+      <div class="sub">Lunas + Titip</div>
+      <div class="sub-breakdown" id="totDiterimaBreakdown"></div>
+    </div>
+  </div>
+
+  <div class="periode-info" id="periodeInfo"></div>
+
+  <!-- ===== CONTROLS ===== -->
+  <div class="controls">
+    <button class="tabbtn active" data-cat="semua">SEMUA</button>
+    <button class="tabbtn" data-cat="belum">BELUM LUNAS</button>
+    <button class="tabbtn" data-cat="titip">TITIP</button>
+    <button class="tabbtn" data-cat="lunas">SUDAH LUNAS</button>
+    <select class="sumberfilter" id="sumberFilter">
+      <option value="semua">Semua sumber</option>
+    </select>
+    <select class="sumberfilter" id="salesFilter">
+      <option value="semua">Semua sales</option>
+    </select>
+    <input type="text" class="searchbox" id="searchBox" placeholder="Cari nama toko / sales / no faktur...">
+
+    <div class="view-toggle" id="viewToggle" role="group" aria-label="Pilih tampilan">
+      <button type="button" class="viewbtn active" data-view="table" title="Tampilan Tabel" aria-label="Tampilan Tabel">📋</button>
+      <button type="button" class="viewbtn" data-view="card" title="Tampilan Kartu" aria-label="Tampilan Kartu">🎴</button>
+    </div>
+
+    <div class="settings-wrap" id="settingsWrap">
+      <button type="button" class="btn-gear" id="settingsToggle" title="Pengaturan" aria-label="Pengaturan">⚙️</button>
+      <div class="settings-dropdown" id="settingsDropdown">
+        <div class="settings-item">
+          <label for="minUmurInput">Umur &ge; hari (Belum Lunas)</label>
+          <input type="number" class="umur-input" id="minUmurInput" min="0" value="13" placeholder="0">
+          <span class="settings-hint">Hanya berlaku di tab Belum Lunas</span>
+        </div>
+        <div class="settings-item">
+          <button class="btn-cetak" id="btnCetak" type="button">&#128424; Cetak</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== TABLE VIEW ===== -->
+  <div class="tablewrap" id="tableWrap">
+    <table id="dataTable">
+      <thead>
+        <tr>
+          <th>No</th>
+          <th>Sales</th>
+          <th>No Faktur</th>
+          <th>Toko</th>
+          <th>Tgl Faktur</th>
+          <th>Jatuh Tempo</th>
+          <th class="num">Nominal</th>
+          <th class="num colDibayar">Sudah Dibayar</th>
+          <th class="num">Sisa</th>
+          <th class="num colUmur" title="Umur Piutang (hari lewat jatuh tempo)">Umur</th>
+          <th class="colPelunasan" title="Tanggal Pelunasan">Tgl Pelunasan</th>
+          <th>Status</th>
+          <th>Sumber</th>
+        </tr>
+      </thead>
+      <tbody id="tbody"></tbody>
+    </table>
+  </div>
+
+  <!-- ===== CARD VIEW ===== -->
+  <div class="cardview" id="cardView"></div>
+
+  <!-- ===== EMPTY STATE ===== -->
+  <div class="empty-state" id="emptyState" style="display:none;">
+    <span class="big">Belum ada data</span>
+    <span id="emptyDesc">Upload file REKAP_AR atau input data manual lewat menu (Input AR Minyak / Input AR Rupa‑rupa).</span>
+  </div>
+
+</div>
+
+<!-- ===== TOAST ===== -->
+<div class="toast" id="toast"></div>
+
+<!-- ===== MODAL INPUT MANUAL ===== -->
+<div class="modal-overlay" id="inputModal">
+  <div class="modal-box">
+    <div class="modal-header">
+      <h3 id="modalTitle">Input Data AR</h3>
+      <button type="button" class="modal-close" id="modalCloseBtn" title="Tutup">&times;</button>
+    </div>
+    <div class="modal-body">
+      <form id="inputForm" autocomplete="off">
+        <input type="hidden" id="inputSlot" value="">
+        <div class="form-grid">
+          <div class="form-group">
+            <label for="inpSales">Sales *</label>
+            <input type="text" id="inpSales" required placeholder="Nama sales">
+          </div>
+          <div class="form-group">
+            <label for="inpNoFaktur">No Faktur *</label>
+            <input type="text" id="inpNoFaktur" required placeholder="Nomor faktur">
+          </div>
+          <div class="form-group full">
+            <label for="inpToko">Nama Toko *</label>
+            <input type="text" id="inpToko" required placeholder="Nama toko / pelanggan">
+          </div>
+          <div class="form-group">
+            <label for="inpTglFaktur">Tgl Faktur *</label>
+            <input type="date" id="inpTglFaktur" required>
+          </div>
+          <div class="form-group">
+            <label for="inpTglJatuhTempo">Jatuh Tempo *</label>
+            <input type="date" id="inpTglJatuhTempo" required>
+          </div>
+          <div class="form-group">
+            <label for="inpNominal">Nominal (Rp) *</label>
+            <input type="number" id="inpNominal" required min="0" step="1" placeholder="0">
+          </div>
+          <div class="form-group">
+            <label for="inpSudahBayar">Sudah Dibayar (Rp)</label>
+            <input type="number" id="inpSudahBayar" min="0" step="1" value="0" placeholder="0">
+            <span class="form-hint">Isi 0 jika belum ada pembayaran</span>
+          </div>
+          <div class="form-group">
+            <label for="inpStatus">Status</label>
+            <select id="inpStatus">
+              <option value="BELUM LUNAS">Belum Lunas</option>
+              <option value="SUDAH LUNAS">Sudah Lunas</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="inpTglPelunasan">Tgl Pelunasan</label>
+            <input type="date" id="inpTglPelunasan">
+            <span class="form-hint">Otomatis terisi jika status "Sudah Lunas"</span>
+          </div>
+        </div>
+        <div class="form-actions">
+          <button type="button" class="btn-cancel" id="modalCancelBtn">Batal</button>
+          <button type="submit" class="btn-save">Simpan Data</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script>
+// ============================================================
+//  INDEXEDDB WRAPPER (Promise-based, tanpa library eksternal)
+// ============================================================
+const DB_NAME = 'PiutangDB';
+const DB_VERSION = 1;
+const STORE_SLOTS = 'slots';
+const STORE_META = 'meta';
+
+let _dbInstance = null;
+
+function openDB(){
+  return new Promise((resolve, reject) => {
+    if (_dbInstance) return resolve(_dbInstance);
+    const req = indexedDB.open(DB_NAME, DB_VERSION);
+    req.onupgradeneeded = (e) => {
+      const db = e.target.result;
+      if (!db.objectStoreNames.contains(STORE_SLOTS)){
+        db.createObjectStore(STORE_SLOTS, { keyPath: 'key' });
+      }
+      if (!db.objectStoreNames.contains(STORE_META)){
+        db.createObjectStore(STORE_META, { keyPath: 'key' });
+      }
+    };
+    req.onsuccess = () => { _dbInstance = req.result; resolve(_dbInstance); };
+    req.onerror = () => reject(req.error);
+  });
+}
+
+async function idbGet(store, key){
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(store, 'readonly');
+    const req = tx.objectStore(store).get(key);
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+}
+
+async function idbPut(store, value){
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(store, 'readwrite');
+    const req = tx.objectStore(store).put(value);
+    req.onsuccess = () => resolve();
+    req.onerror = () => reject(req.error);
+  });
+}
+
+async function idbDelete(store, key){
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(store, 'readwrite');
+    const req = tx.objectStore(store).delete(key);
+    req.onsuccess = () => resolve();
+    req.onerror = () => reject(req.error);
+  });
+}
+
+async function idbGetAll(store){
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(store, 'readonly');
+    const req = tx.objectStore(store).getAll();
+    req.onsuccess = () => resolve(req.result || []);
+    req.onerror = () => reject(req.error);
+  });
+}
+
+async function idbClear(store){
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(store, 'readwrite');
+    const req = tx.objectStore(store).clear();
+    req.onsuccess = () => resolve();
+    req.onerror = () => reject(req.error);
+  });
+}
+
+// ============================================================
+//  KOLOM & STATE
+// ============================================================
+const COL = {
+  NO:0, SALES:1, NO_FAKTUR:2, TANGGAL:3, KD_CUS:4, TOKO:5, ALAMAT:6,
+  TGL_KIRIM:7, TGL_JATUH_TEMPO:8, NOMINAL:9, SALDO_AWAL:10,
+  TOTAL_PAYMENT:57, SISA:65, TGL_PELUNASAN:66, STATUS:68
+};
+const DATA_START_ROW_INDEX = 13;
+
+const state = { A: null, B: null };
+
+// Kunci lama di localStorage (untuk migrasi sekali)
+const LEGACY_STORAGE_KEY = 'piutangHarianState_v1';
+
+// ============================================================
+//  TOAST
+// ============================================================
+let toastTimer = null;
+function showToast(msg, type){
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = 'toast show' + (type ? ' ' + type : '');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => {
+    el.className = 'toast' + (type ? ' ' + type : '');
+  }, 3000);
+}
+
+// ============================================================
+//  VIEW MODE
+// ============================================================
+const VIEW_KEY = 'piutangViewMode_v1';
+let viewMode = 'table';
+try { viewMode = localStorage.getItem(VIEW_KEY) || 'table'; } catch(e){}
+
+function applyViewModeUI(){
+  document.querySelectorAll('.viewbtn').forEach(b => {
+    b.classList.toggle('active', b.dataset.view === viewMode);
+  });
+}
+function setViewMode(mode){
+  viewMode = mode;
+  try { localStorage.setItem(VIEW_KEY, mode); } catch(e){}
+  applyViewModeUI();
+  render();
+}
+document.querySelectorAll('.viewbtn').forEach(btn => {
+  btn.addEventListener('click', () => setViewMode(btn.dataset.view));
+});
+applyViewModeUI();
+
+// ============================================================
+//  TEMA
+// ============================================================
+(function initTheme(){
+  const THEME_KEY = 'piutangTheme_v1';
+  const btn = document.getElementById('themeToggle');
+  function apply(t){
+    if (t === 'dark'){
+      document.documentElement.setAttribute('data-theme','dark');
+      btn.textContent = '☀️';
+      btn.title = 'Ganti ke Mode Terang';
+    } else {
+      document.documentElement.removeAttribute('data-theme');
+      btn.textContent = '🌙';
+      btn.title = 'Ganti ke Mode Gelap';
+    }
+  }
+  let saved = 'light';
+  try { saved = localStorage.getItem(THEME_KEY) || 'light'; } catch(e){}
+  apply(saved);
+  btn.addEventListener('click', () => {
+    const cur = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+    apply(cur);
+    try { localStorage.setItem(THEME_KEY, cur); } catch(e){}
+  });
+})();
+
+// ============================================================
+//  UTILITAS
+// ============================================================
+
+// Konversi nilai tanggal (number Excel serial ATAU string) → Date (UTC).
+function excelSerialToDate(v){
+  if (v === null || v === undefined || v === '') return null;
+
+  // Number → Excel serial (1900 date system)
+  if (typeof v === 'number'){
+    if (!isFinite(v)) return null;
+    const utcDays = Math.floor(v - 25569);
+    const utcMs = utcDays * 86400 * 1000;
+    const d = new Date(utcMs);
+    return isNaN(d.getTime()) ? null : d;
+  }
+
+  // String → coba beberapa format
+  if (typeof v === 'string'){
+    const s = v.trim();
+    if (!s) return null;
+
+    // ISO: YYYY-MM-DD
+    let m = s.match(/^(\d{4})[\/\-](\d{1,2})[\/\-](\d{1,2})/);
+    if (m){
+      const d = new Date(Date.UTC(parseInt(m[1],10), parseInt(m[2],10)-1, parseInt(m[3],10)));
+      return isNaN(d.getTime()) ? null : d;
+    }
+
+    // DD/MM/YYYY atau DD-MM-YYYY
+    m = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})/);
+    if (m){
+      let y = parseInt(m[3],10);
+      if (y < 100) y += 2000;
+      const d = new Date(Date.UTC(y, parseInt(m[2],10)-1, parseInt(m[1],10)));
+      return isNaN(d.getTime()) ? null : d;
+    }
+
+    // Fallback: native Date parse
+    const d2 = new Date(s);
+    return isNaN(d2.getTime()) ? null : d2;
+  }
+
+  return null;
+}
+
+function fmtDateFromDateObj(d){
+  if (!d) return '';
+  const dd = String(d.getUTCDate()).padStart(2,'0');
+  const mm = String(d.getUTCMonth()+1).padStart(2,'0');
+  const yy = d.getUTCFullYear();
+  return `${dd}/${mm}/${yy}`;
+}
+function fmtDate(serial){ return fmtDateFromDateObj(excelSerialToDate(serial)); }
+
+function fmtRp(n){
+  n = Number(n)||0;
+  return 'Rp ' + Math.round(n).toLocaleString('id-ID');
+}
+
+// Parser angka yang mendukung format Indonesia & US.
+function parseNumber(v){
+  if (v === null || v === undefined || v === '') return 0;
+  if (typeof v === 'number') return isFinite(v) ? v : 0;
+
+  let s = String(v).trim();
+  if (!s) return 0;
+
+  s = s.replace(/rp\.?\s*/i, '').replace(/\s/g, '');
+  s = s.replace(/[^\d.,-]/g, '');
+  if (!s) return 0;
+
+  const hasDot = s.indexOf('.') !== -1;
+  const hasComma = s.indexOf(',') !== -1;
+  const lastDot = s.lastIndexOf('.');
+  const lastComma = s.lastIndexOf(',');
+
+  if (hasDot && hasComma){
+    if (lastComma > lastDot){
+      // Indonesia: 1.234,56
+      s = s.replace(/\./g, '').replace(',', '.');
+    } else {
+      // US: 1,234.56
+      s = s.replace(/,/g, '');
+    }
+  } else if (hasDot){
+    // Hanya titik: 1.234 (ribuan) atau 1.5 (desimal)
+    if (/^-?\d{1,3}(\.\d{3})+$/.test(s)) {
+      s = s.replace(/\./g, '');
+    }
+  } else if (hasComma){
+    // Hanya koma: 1,234 (ribuan) atau 1,5 (desimal)
+    if (/^-?\d{1,3}(,\d{3})+$/.test(s)) {
+      s = s.replace(/,/g, '');
+    } else {
+      s = s.replace(',', '.');
+    }
+  }
+
+  const n = parseFloat(s);
+  return isNaN(n) ? 0 : n;
+}
+
+function todayStr(){
+  const d = new Date();
+  const hari = ['Minggu','Senin','Selasa','Rabu','Kamis','Jumat','Sabtu'][d.getDay()];
+  const dd = String(d.getDate()).padStart(2,'0');
+  const bulan = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agt','Sept','Okt','Nov','Des'][d.getMonth()];
+  return `${hari}, ${dd} ${bulan} ${d.getFullYear()}`;
+}
+document.getElementById('tanggalHariIni').textContent = todayStr();
+
+function umurPiutangHari(tglJatuhTempoSerial){
+  const d = excelSerialToDate(tglJatuhTempoSerial);
+  if (!d) return null;
+  const now = new Date();
+  const nowUTC = Date.UTC(now.getFullYear(), now.getMonth(), now.getDate());
+  const dueUTC = Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate());
+  return Math.floor((nowUTC - dueUTC) / 86400000);
+}
+function fmtUmur(days){
+  if (days === null) return { text:'-', cls:'' };
+  if (days > 7) return { text:`${days} hari`, cls:'umur-over' };
+  if (days > 0) return { text:`${days} hari`, cls:'umur-soon' };
+  if (days === 0) return { text:'Jatuh tempo hari ini', cls:'umur-soon' };
+  return { text:`${Math.abs(days)} hari lagi`, cls:'umur-ok' };
+}
+function normalizeStatus(s){
+  return String(s == null ? '' : s).trim().toUpperCase();
+}
+
+// Kategorisasi berbasis matematika (bukan hanya status text):
+//   sisa <= 0            → lunas
+//   totalPayment > 0     → titip
+//   selain itu           → belum
+function kategoriBaris(status, totalPayment, sisaRiil){
+  totalPayment = totalPayment || 0;
+  if (sisaRiil != null && sisaRiil <= 0) return 'lunas';
+  if (totalPayment > 0) return 'titip';
+
+  // Fallback: kalau status text menyatakan LUNAS walau math belum
+  const st = normalizeStatus(status);
+  if (st === 'SUDAH LUNAS' || st === 'LUNAS') return 'lunas';
+  return 'belum';
+}
+function escapeHtml(s){
+  return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+// ============================================================
+//  PARSE EXCEL
+// ============================================================
+function parseWorkbook(arrayBuffer, sourceLabel){
+  const wb = XLSX.read(arrayBuffer, {type:'array', cellDates:false});
+  const ws = wb.Sheets[wb.SheetNames[0]];
+  const rows = XLSX.utils.sheet_to_json(ws, {header:1, raw:true, defval:null});
+  const date1904 = !!(wb.Workbook && wb.Workbook.WBProps && wb.Workbook.WBProps.date1904);
+  const dateOffset = date1904 ? 1462 : 0;
+
+  const out = [];
+  for (let i = DATA_START_ROW_INDEX; i < rows.length; i++){
+    const r = rows[i];
+    if (!r) continue;
+    const noFaktur = r[COL.NO_FAKTUR];
+    if (noFaktur === null || noFaktur === undefined || noFaktur === '') continue;
+
+    const totalPayment = parseNumber(r[COL.TOTAL_PAYMENT]);
+    const nominal = parseNumber(r[COL.NOMINAL]);
+    const saldoAwalRaw = parseNumber(r[COL.SALDO_AWAL]);
+    const saldoAwal = saldoAwalRaw > 0 ? saldoAwalRaw : nominal;
+    const statusRaw = r[COL.STATUS];
+    const sisaRiil = Math.max(saldoAwal - totalPayment, 0);
+    const kategori = kategoriBaris(statusRaw, totalPayment, sisaRiil);
+
+    const tglFakturRaw = r[COL.TANGGAL];
+    const tglJatuhTempoRaw = r[COL.TGL_JATUH_TEMPO];
+    const tglPelunasanRaw = r[COL.TGL_PELUNASAN];
+
+    out.push({
+      no: r[COL.NO],
+      sales: r[COL.SALES] || '',
+      noFaktur: noFaktur,
+      toko: r[COL.TOKO] || '',
+      alamat: r[COL.ALAMAT] || '',
+      tglFaktur: typeof tglFakturRaw === 'number' ? tglFakturRaw + dateOffset : tglFakturRaw,
+      tglJatuhTempo: typeof tglJatuhTempoRaw === 'number' ? tglJatuhTempoRaw + dateOffset : tglJatuhTempoRaw,
+      tglPelunasan: typeof tglPelunasanRaw === 'number' ? tglPelunasanRaw + dateOffset : tglPelunasanRaw,
+      nominal, saldoAwal, totalPayment, sisaRiil,
+      kategori, sumber: sourceLabel
+    });
+  }
+  return out;
+}
+
+// ============================================================
+//  PENYIMPANAN — INDEXEDDB
+// ============================================================
+async function saveStateToStorage(){
+  try {
+    for (const k of ['A', 'B']){
+      if (state[k]){
+        await idbPut(STORE_SLOTS, {
+          key: k,
+          filename: state[k].filename,
+          label: state[k].label,
+          rows: state[k].rows,
+          ts: state[k].ts.toISOString()
+        });
+      } else {
+        await idbDelete(STORE_SLOTS, k);
+      }
+    }
+  } catch(e){
+    console.error('Gagal menyimpan ke IndexedDB:', e);
+    showToast('Gagal menyimpan data ke IndexedDB.', 'error');
+  }
+}
+
+async function loadStateFromStorage(){
+  try {
+    const migFlag = await idbGet(STORE_META, 'migrated_from_ls');
+
+    if (!migFlag){
+      let raw = null;
+      try { raw = localStorage.getItem(LEGACY_STORAGE_KEY); } catch(e){}
+
+      if (raw){
+        try {
+          const parsed = JSON.parse(raw);
+          let migratedCount = 0;
+          for (const k of ['A', 'B']){
+            if (parsed[k]){
+              await idbPut(STORE_SLOTS, {
+                key: k,
+                filename: parsed[k].filename,
+                label: parsed[k].label,
+                rows: parsed[k].rows || [],
+                ts: parsed[k].ts || new Date().toISOString()
+              });
+              migratedCount += (parsed[k].rows ? parsed[k].rows.length : 0);
+            }
+          }
+          if (migratedCount > 0){
+            console.log(`✅ Migrasi ${migratedCount} faktur dari localStorage ke IndexedDB`);
+            await idbPut(STORE_META, { key: 'migrated_from_ls', value: true, ts: new Date().toISOString() });
+            setTimeout(() => {
+              showToast(`Migrasi berhasil: ${migratedCount} faktur dipindah ke IndexedDB.`, 'success');
+            }, 800);
+          } else {
+            await idbPut(STORE_META, { key: 'migrated_from_ls', value: true, ts: new Date().toISOString() });
+          }
+        } catch(err){
+          console.error('Migrasi dari localStorage gagal:', err);
+          await idbPut(STORE_META, { key: 'migrated_from_ls', value: true, ts: new Date().toISOString() });
+        }
+      } else {
+        await idbPut(STORE_META, { key: 'migrated_from_ls', value: true, ts: new Date().toISOString() });
+      }
+    }
+
+    const slots = await idbGetAll(STORE_SLOTS);
+    slots.forEach(slot => {
+      if (slot.key === 'A' || slot.key === 'B'){
+        state[slot.key] = {
+          filename: slot.filename,
+          label: slot.label,
+          rows: slot.rows || [],
+          ts: slot.ts ? new Date(slot.ts) : new Date()
+        };
+      }
+    });
+  } catch(e){
+    console.error('Gagal memuat dari IndexedDB:', e);
+    showToast('Gagal memuat data dari IndexedDB.', 'error');
+  }
+}
+
+// ============================================================
+//  LABEL FROM FILENAME
+// ============================================================
+function labelFromFilename(name){
+  const up = String(name || '').toUpperCase();
+  if (up.includes('MINYAK')) return 'MINYAK';
+  if (up.includes('RUPA')) return 'RUPA-RUPA';
+  return String(name || '').replace(/\.xlsx$/i,'');
+}
+
+// ============================================================
+//  BACKUP / RESTORE JSON
+// ============================================================
+function backupData(){
+  const rows = allRows();
+  if (rows.length === 0){
+    showToast('Tidak ada data untuk di-backup.', 'error');
+    return;
+  }
+
+  const payload = {
+    app: 'Buku Piutang Harian',
+    version: 1,
+    storage: 'IndexedDB',
+    exportedAt: new Date().toISOString(),
+    state: {}
+  };
+
+  ['A','B'].forEach(k => {
+    if (state[k]){
+      payload.state[k] = {
+        filename: state[k].filename,
+        label: state[k].label,
+        rows: state[k].rows,
+        ts: state[k].ts.toISOString()
+      };
+    }
+  });
+
+  const json = JSON.stringify(payload, null, 2);
+  const blob = new Blob([json], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+
+  const d = new Date();
+  const yyyy = d.getFullYear();
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  const dd = String(d.getDate()).padStart(2, '0');
+  const hh = String(d.getHours()).padStart(2, '0');
+  const mi = String(d.getMinutes()).padStart(2, '0');
+  const filename = `piutang-backup-${yyyy}${mm}${dd}-${hh}${mi}.json`;
+
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+
+  showToast(`Backup berhasil: ${filename}`, 'success');
+}
+
+function restoreDataFromFile(file){
+  const reader = new FileReader();
+  reader.onload = async (e) => {
+    try {
+      const parsed = JSON.parse(e.target.result);
+
+      if (!parsed || !parsed.state || typeof parsed.state !== 'object'){
+        throw new Error('Format file tidak valid (tidak ada "state").');
+      }
+
+      const slotA = parsed.state.A || null;
+      const slotB = parsed.state.B || null;
+      if (!slotA && !slotB){
+        throw new Error('File tidak berisi data slot A maupun B.');
+      }
+
+      const totalA = slotA && Array.isArray(slotA.rows) ? slotA.rows.length : 0;
+      const totalB = slotB && Array.isArray(slotB.rows) ? slotB.rows.length : 0;
+      const totalBackup = totalA + totalB;
+      const totalCurrent = allRows().length;
+
+      const msg =
+        `File backup valid.\n\n` +
+        `File berisi:\n` +
+        (slotA ? `• Slot A (${slotA.label || '-'}): ${totalA} faktur\n` : '') +
+        (slotB ? `• Slot B (${slotB.label || '-'}): ${totalB} faktur\n` : '') +
+        `\nTotal: ${totalBackup} faktur\n\n` +
+        `Data saat ini: ${totalCurrent} faktur.\n\n` +
+        `Semua data saat ini akan DIGANTI dengan data dari file backup.\n\n` +
+        `Lanjutkan?`;
+
+      if (!confirm(msg)) return;
+
+      state.A = null;
+      state.B = null;
+      if (slotA){
+        state.A = {
+          filename: slotA.filename || '(restore)',
+          label: slotA.label || 'SLOT-A',
+          rows: Array.isArray(slotA.rows) ? slotA.rows : [],
+          ts: slotA.ts ? new Date(slotA.ts) : new Date()
+        };
+      }
+      if (slotB){
+        state.B = {
+          filename: slotB.filename || '(restore)',
+          label: slotB.label || 'SLOT-B',
+          rows: Array.isArray(slotB.rows) ? slotB.rows : [],
+          ts: slotB.ts ? new Date(slotB.ts) : new Date()
+        };
+      }
+
+      await saveStateToStorage();
+      updateUploadStatus();
+      rebuildSumberFilter();
+      rebuildSalesFilter();
+      render();
+
+      showToast(`Restore berhasil: ${totalBackup} faktur dimuat.`, 'success');
+
+    } catch(err){
+      showToast(`Gagal restore: ${err.message}`, 'error');
+      console.error(err);
+    }
+  };
+  reader.onerror = () => {
+    showToast('Gagal membaca file backup.', 'error');
+  };
+  reader.readAsText(file);
+}
+
+// ============================================================
+//  HANDLER UPLOAD EXCEL
+// ============================================================
+function closeMenuDropdown(){
+  const dd = document.getElementById('menuDropdown');
+  const tg = document.getElementById('menuToggle');
+  if (dd) dd.classList.remove('show');
+  if (tg) tg.classList.remove('active');
+}
+
+async function handleFile(slotKey, file){
+  const statusEl = document.getElementById('uploadStatus');
+
+  if (state[slotKey] && state[slotKey].rows && state[slotKey].rows.length > 0){
+    const existingLabel = state[slotKey].label || slotKey;
+    const ok = confirm(
+      `Slot ${slotKey} (${existingLabel}) sudah berisi ${state[slotKey].rows.length} faktur ` +
+      `(termasuk data input manual).\n\nGanti dengan file baru "${file.name}"?\n` +
+      `Data lama di slot ini akan hilang.`
+    );
+    if (!ok) return;
+  }
+
+  statusEl.innerHTML = `<span>Memproses ${escapeHtml(file.name)}...</span>`;
+  const reader = new FileReader();
+  reader.onload = async (e) => {
+    try {
+      const label = labelFromFilename(file.name);
+      const rows = parseWorkbook(e.target.result, label);
+      state[slotKey] = { filename: file.name, label, rows, ts: new Date() };
+      await saveStateToStorage();
+      updateUploadStatus();
+      rebuildSumberFilter();
+      rebuildSalesFilter();
+      render();
+      showToast(`Upload berhasil: ${rows.length} faktur (${label})`, 'success');
+    } catch(err){
+      statusEl.innerHTML = `<span style="color:#F5A9A9">Gagal membaca file: ${escapeHtml(err.message)}</span>`;
+      showToast(`Gagal membaca file: ${err.message}`, 'error');
+    }
+  };
+  reader.onerror = () => {
+    statusEl.innerHTML = `<span style="color:#F5A9A9">Gagal membaca file (file rusak / tidak bisa diakses).</span>`;
+    showToast('Gagal membaca file.', 'error');
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+// ============================================================
+//  CLEAR ALL
+// ============================================================
+async function clearAllData(){
+  const total = allRows().length;
+  if (total === 0){
+    showToast('Tidak ada data untuk dihapus.', 'error');
+    return;
+  }
+  const ok = confirm(
+    `Hapus SEMUA data?\n\n` +
+    `Total ${total} faktur dari semua slot (MINYAK & RUPA-RUPA, termasuk input manual) akan dihapus permanen.\n\n` +
+    `Disarankan backup terlebih dahulu lewat menu "💾 Backup Data (.json)".\n\n` +
+    `Lanjutkan?`
+  );
+  if (!ok) return;
+
+  state.A = null;
+  state.B = null;
+  try {
+    await idbClear(STORE_SLOTS);
+  } catch(e){
+    console.error('Gagal menghapus IndexedDB:', e);
+  }
+  updateUploadStatus();
+  rebuildSumberFilter();
+  rebuildSalesFilter();
+  render();
+  showToast('Semua data telah dihapus.', 'success');
+}
+
+// ============================================================
+//  UPDATE UI
+// ============================================================
+function updateUploadStatus(){
+  const el = document.getElementById('uploadStatus');
+  let parts = [];
+  ['A','B'].forEach(k => {
+    const data = state[k];
+    if (data){
+      parts.push(`<span class="ok">${escapeHtml(data.label)}</span>: <span class="file-count">${data.rows.length}</span> faktur`);
+    }
+  });
+  const dbBadge = `<span class="db-badge" title="Data tersimpan di IndexedDB (lokal)">IndexedDB</span>`;
+  if (parts.length === 0){
+    el.innerHTML = dbBadge + '<span>Belum ada file diupload.</span>';
+  } else {
+    el.innerHTML = dbBadge + '<span>' + parts.join(' - ') + '</span>';
+  }
+}
+
+function rebuildSumberFilter(){
+  const sel = document.getElementById('sumberFilter');
+  const current = sel.value;
+  const labels = new Set();
+  ['A','B'].forEach(k => { if(state[k]) labels.add(state[k].label); });
+  sel.innerHTML = '<option value="semua">Semua sumber</option>' +
+    Array.from(labels).map(l => `<option value="${escapeHtml(l)}">${escapeHtml(l)}</option>`).join('');
+  if (Array.from(labels).includes(current)) sel.value = current;
+}
+
+function rebuildSalesFilter(){
+  const sel = document.getElementById('salesFilter');
+  const current = sel.value;
+  const names = new Set();
+  allRows().forEach(r => { const n = String(r.sales||'').trim(); if (n) names.add(n); });
+  const sorted = Array.from(names).sort();
+  sel.innerHTML = '<option value="semua">Semua sales</option>' +
+    sorted.map(n => `<option value="${escapeHtml(n)}">${escapeHtml(n)}</option>`).join('');
+  if (sorted.includes(current)) sel.value = current;
+}
+
+// ============================================================
+//  WIRING TOMBOL UPLOAD (tutup menu setelah pilih file)
+// ============================================================
+document.getElementById('fileA').addEventListener('change', function(e){
+  closeMenuDropdown();
+  if (this.files[0]) handleFile('A', this.files[0]);
+  this.value = '';
+});
+document.getElementById('fileB').addEventListener('change', function(e){
+  closeMenuDropdown();
+  if (this.files[0]) handleFile('B', this.files[0]);
+  this.value = '';
+});
+
+// ============================================================
+//  WIRING BACKUP / RESTORE
+// ============================================================
+document.getElementById('backupBtn').addEventListener('click', function(){
+  closeMenuDropdown();
+  backupData();
+});
+
+document.getElementById('restoreFile').addEventListener('change', function(e){
+  closeMenuDropdown();
+  if (this.files[0]) restoreDataFromFile(this.files[0]);
+  this.value = '';
+});
+
+// ============================================================
+//  WIRING MENU DROPDOWN
+// ============================================================
+(function(){
+  const menuWrap = document.getElementById('menuWrap');
+  const menuToggle = document.getElementById('menuToggle');
+  const menuDropdown = document.getElementById('menuDropdown');
+  menuToggle.addEventListener('click', function(e){
+    e.stopPropagation();
+    menuDropdown.classList.toggle('show');
+    menuToggle.classList.toggle('active');
+  });
+  document.addEventListener('click', function(e){
+    if (!menuWrap.contains(e.target)) {
+      menuDropdown.classList.remove('show');
+      menuToggle.classList.remove('active');
+    }
+  });
+})();
+
+// ============================================================
+//  WIRING CLEAR ALL
+// ============================================================
+document.getElementById('clearAllBtn').addEventListener('click', function(){
+  closeMenuDropdown();
+  clearAllData();
+});
+
+// ============================================================
+//  WIRING SETTINGS MENU
+// ============================================================
+(function(){
+  const wrap = document.getElementById('settingsWrap');
+  const toggle = document.getElementById('settingsToggle');
+  const dropdown = document.getElementById('settingsDropdown');
+  toggle.addEventListener('click', function(e){
+    e.stopPropagation();
+    dropdown.classList.toggle('show');
+    toggle.classList.toggle('active');
+  });
+  document.addEventListener('click', function(e){
+    if (!wrap.contains(e.target)) {
+      dropdown.classList.remove('show');
+      toggle.classList.remove('active');
+    }
+  });
+})();
+
+// ============================================================
+//  FILTER STATE
+// ============================================================
+let activeCat = 'semua';
+document.querySelectorAll('.tabbtn[data-cat]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.tabbtn[data-cat]').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    activeCat = btn.dataset.cat;
+    render();
+  });
+});
+document.getElementById('sumberFilter').addEventListener('change', render);
+document.getElementById('salesFilter').addEventListener('change', render);
+document.getElementById('searchBox').addEventListener('input', render);
+document.getElementById('minUmurInput').addEventListener('input', render);
+
+document.getElementById('btnCetak').addEventListener('click', () => {
+  const catLabel = {semua:'Semua', belum:'Belum Lunas', titip:'Titip', lunas:'Sudah Lunas'}[activeCat];
+  const minUmur = Number(document.getElementById('minUmurInput').value) || 0;
+  const sumberVal = document.getElementById('sumberFilter').value;
+  const salesVal = document.getElementById('salesFilter').value;
+  const q = document.getElementById('searchBox').value.trim();
+
+  let filterParts = [`Kategori: ${catLabel}`];
+  if (activeCat === 'belum' && minUmur > 0) filterParts.push(`Umur &ge; ${minUmur} hari`);
+  if (sumberVal !== 'semua') filterParts.push(`Sumber: ${escapeHtml(sumberVal)}`);
+  if (salesVal !== 'semua') filterParts.push(`Sales: ${escapeHtml(salesVal)}`);
+  if (q) filterParts.push(`Cari: "${escapeHtml(q)}"`);
+
+  document.getElementById('printHeader').innerHTML =
+    `<b>BUKU PIUTANG HARIAN</b> &mdash; dicetak ${todayStr()}<br>${filterParts.join(' &middot; ')}`;
+
+  document.getElementById('settingsDropdown').classList.remove('show');
+  document.getElementById('settingsToggle').classList.remove('active');
+
+  // Pastikan tabel terisi untuk cetak (kita selalu isi tbody di render(),
+  // jadi tidak perlu intervensi tambahan di sini).
+  window.print();
+});
+
+// ============================================================
+//  FUNGSI DATA
+// ============================================================
+function allRows(){
+  let rows = [];
+  ['A','B'].forEach(k => { if (state[k]) rows = rows.concat(state[k].rows); });
+  return rows;
+}
+
+function computePeriodeData(rows){
+  let min = null, max = null;
+  rows.forEach(r => {
+    const d = excelSerialToDate(r.tglFaktur);
+    if (!d) return;
+    if (!min || d < min) min = d;
+    if (!max || d > max) max = d;
+  });
+  return { min, max };
+}
+
+function breakdownBySumber(arr, f){
+  const map = {};
+  arr.forEach(r => { map[r.sumber] = (map[r.sumber]||0) + f(r); });
+  return map;
+}
+function fmtBreakdown(map){
+  const keys = Object.keys(map).sort();
+  if (keys.length <= 1) return '';
+  return keys.map(k => `${escapeHtml(k)}: ${fmtRp(map[k])}`).join('<br>');
+}
+
+// ============================================================
+//  BUILD CARD HTML
+// ============================================================
+function buildCardHtml(r, idx){
+  const umur = fmtUmur(umurPiutangHari(r.tglJatuhTempo));
+  const stampLabel = {belum:'BELUM LUNAS', titip:'TITIP', lunas:'LUNAS'};
+  const sisaCls = r.sisaRiil > 0 ? 'accent-red' : '';
+
+  let extraFields = '';
+  if (r.kategori === 'lunas' || r.kategori === 'titip'){
+    extraFields += `
+      <div class="card-field">
+        <span class="field-label">Dibayar</span>
+        <span class="field-value accent-green">${fmtRp(r.totalPayment)}</span>
+      </div>`;
+  }
+  if (r.kategori === 'belum' || r.kategori === 'titip'){
+    extraFields += `
+      <div class="card-field">
+        <span class="field-label">Umur</span>
+        <span class="field-value ${umur.cls}">${umur.text}</span>
+      </div>`;
+  }
+  if (r.kategori === 'lunas' && r.tglPelunasan){
+    extraFields += `
+      <div class="card-field">
+        <span class="field-label">Tgl Pelunasan</span>
+        <span class="field-value">${fmtDate(r.tglPelunasan)}</span>
+      </div>`;
+  }
+
+  return `
+    <div class="invoice-card">
+      <div class="card-header">
+        <div>
+          <div class="card-no">#${idx+1} · ${escapeHtml(r.sales)}</div>
+          <div class="card-toko">${escapeHtml(r.toko)}</div>
+          <div class="card-faktur">${escapeHtml(String(r.noFaktur))}</div>
+        </div>
+        <span class="stamp ${r.kategori}">${stampLabel[r.kategori]}</span>
+      </div>
+      <div class="card-grid">
+        <div class="card-field">
+          <span class="field-label">Nominal</span>
+          <span class="field-value">${fmtRp(r.nominal)}</span>
+        </div>
+        <div class="card-field">
+          <span class="field-label">Sisa</span>
+          <span class="field-value ${sisaCls}">${fmtRp(r.sisaRiil)}</span>
+        </div>
+        ${extraFields}
+      </div>
+      <div class="card-footer">
+        <span class="card-date">Faktur: ${fmtDate(r.tglFaktur)} · JT: ${fmtDate(r.tglJatuhTempo)}</span>
+        <span class="card-sumber">${escapeHtml(r.sumber)}</span>
+      </div>
+    </div>
+  `;
+}
+
+// ============================================================
+//  RENDER
+// ============================================================
+function render(){
+  const rows = allRows();
+  const belum = rows.filter(r=>r.kategori==='belum');
+  const titip = rows.filter(r=>r.kategori==='titip');
+  const lunas = rows.filter(r=>r.kategori==='lunas');
+
+  const periodeEl = document.getElementById('periodeInfo');
+  if (rows.length === 0){
+    periodeEl.textContent = '';
+  } else {
+    const { min, max } = computePeriodeData(rows);
+    periodeEl.textContent = (min && max)
+      ? `Periode data (berdasarkan tgl faktur di file yang diupload): ${fmtDateFromDateObj(min)} \u2013 ${fmtDateFromDateObj(max)}`
+      : '';
+  }
+
+  const sum = (arr, f) => arr.reduce((a,r)=>a+f(r),0);
+
+  // FIX: gunakan sisaRiil untuk total "Belum Lunas" agar konsisten dgn kolom Sisa
+  document.getElementById('totBelumNominal').textContent = fmtRp(sum(belum, r=>r.sisaRiil));
+  document.getElementById('totBelumCount').textContent = belum.length + ' faktur';
+  document.getElementById('totBelumBreakdown').innerHTML = fmtBreakdown(breakdownBySumber(belum, r=>r.sisaRiil));
+
+  document.getElementById('totTitipBayar').textContent = fmtRp(sum(titip,r=>r.totalPayment));
+  document.getElementById('totTitipSisa').textContent = `sisa ${fmtRp(sum(titip,r=>r.sisaRiil))} \u00b7 ${titip.length} faktur`;
+  document.getElementById('totTitipBreakdown').innerHTML = fmtBreakdown(breakdownBySumber(titip, r=>r.totalPayment));
+
+  document.getElementById('totLunasNominal').textContent = fmtRp(sum(lunas,r=>r.totalPayment));
+  const lunasNominalSum = sum(lunas, r=>r.nominal);
+  const lunasPaidSum = sum(lunas, r=>r.totalPayment);
+  document.getElementById('totLunasCount').textContent = lunas.length + ' faktur' +
+    (Math.abs(lunasNominalSum - lunasPaidSum) > 1 ? ` \u00b7 faktur ${fmtRp(lunasNominalSum)}` : '');
+  document.getElementById('totLunasBreakdown').innerHTML = fmtBreakdown(breakdownBySumber(lunas, r=>r.totalPayment));
+
+  document.getElementById('totDiterima').textContent = fmtRp(sum(lunas,r=>r.totalPayment) + sum(titip,r=>r.totalPayment));
+  const diterimaMap = {};
+  [lunas, titip].forEach(arr => arr.forEach(r => { diterimaMap[r.sumber] = (diterimaMap[r.sumber]||0) + r.totalPayment; }));
+  document.getElementById('totDiterimaBreakdown').innerHTML = fmtBreakdown(diterimaMap);
+
+  let filtered = rows;
+  if (activeCat !== 'semua') filtered = filtered.filter(r=>r.kategori===activeCat);
+  const sumberVal = document.getElementById('sumberFilter').value;
+  if (sumberVal !== 'semua') filtered = filtered.filter(r=>r.sumber===sumberVal);
+  const salesVal = document.getElementById('salesFilter').value;
+  if (salesVal !== 'semua') filtered = filtered.filter(r=>String(r.sales||'').trim()===salesVal);
+  const minUmurVal = Number(document.getElementById('minUmurInput').value) || 0;
+  if (activeCat === 'belum' && minUmurVal > 0){
+    filtered = filtered.filter(r => {
+      const d = umurPiutangHari(r.tglJatuhTempo);
+      return d !== null && d >= minUmurVal;
+    });
+  }
+  const q = document.getElementById('searchBox').value.trim().toLowerCase();
+  if (q) filtered = filtered.filter(r =>
+    String(r.toko).toLowerCase().includes(q) ||
+    String(r.sales).toLowerCase().includes(q) ||
+    String(r.noFaktur).toLowerCase().includes(q)
+  );
+
+  const tbody = document.getElementById('tbody');
+  const emptyState = document.getElementById('emptyState');
+  const tableEl = document.getElementById('dataTable');
+  const tableWrap = document.getElementById('tableWrap');
+  const cardView = document.getElementById('cardView');
+
+  if (filtered.length === 0){
+    tbody.innerHTML = '';
+    cardView.innerHTML = '';
+    cardView.classList.remove('show');
+    tableWrap.style.display = 'none';       // FIX: sembunyikan wadah tabel
+    tableEl.style.display = 'none';
+    emptyState.style.display = 'block';
+
+    if (rows.length === 0){
+      emptyState.querySelector('.big').textContent = 'Belum ada data';
+      document.getElementById('emptyDesc').textContent = 'Upload file REKAP_AR atau input data manual lewat menu (Input AR Minyak / Input AR Rupa‑rupa).';
+    } else {
+      emptyState.querySelector('.big').textContent = 'Tidak ada hasil';
+      document.getElementById('emptyDesc').textContent = 'Tidak ada faktur yang cocok dengan kategori/filter/pencarian saat ini. Coba longgarkan filter "Umur \u2265 hari", sumber, sales, atau kata kunci.';
+    }
+    return;
+  }
+  emptyState.style.display = 'none';
+  tableEl.style.display = '';
+  tableWrap.style.display = '';
+
+  if (activeCat === 'belum') tableEl.classList.add('show-umur');
+  else tableEl.classList.remove('show-umur');
+  if (activeCat === 'lunas') tableEl.classList.add('show-lunas');
+  else tableEl.classList.remove('show-lunas');
+
+  // FIX: SELALU isi tbody (agar cetak dari mode kartu tetap berfungsi),
+  // terlepas dari viewMode.
+  const stampLabel = {belum:'BELUM LUNAS', titip:'TITIP', lunas:'LUNAS'};
+  tbody.innerHTML = filtered.map((r, idx) => {
+    const umur = fmtUmur(umurPiutangHari(r.tglJatuhTempo));
+    return `
+    <tr>
+      <td>${idx + 1}</td>
+      <td>${escapeHtml(r.sales)}</td>
+      <td>${escapeHtml(String(r.noFaktur))}</td>
+      <td class="toko">${escapeHtml(r.toko)}</td>
+      <td>${fmtDate(r.tglFaktur)}</td>
+      <td>${fmtDate(r.tglJatuhTempo)}</td>
+      <td class="num">${fmtRp(r.nominal)}</td>
+      <td class="num colDibayar">${fmtRp(r.totalPayment)}</td>
+      <td class="num">${fmtRp(r.sisaRiil)}</td>
+      <td class="num colUmur ${umur.cls}">${umur.text}</td>
+      <td class="colPelunasan">${fmtDate(r.tglPelunasan)}</td>
+      <td><span class="stamp ${r.kategori}">${stampLabel[r.kategori]}</span></td>
+      <td>${escapeHtml(r.sumber)}</td>
+    </tr>
+  `;}).join('');
+
+  // Toggle tampilan tabel vs kartu
+  if (viewMode === 'card'){
+    tableWrap.style.display = 'none';
+    cardView.classList.add('show');
+    cardView.innerHTML = filtered.map((r, idx) => buildCardHtml(r, idx)).join('');
+  } else {
+    tableWrap.style.display = '';
+    cardView.classList.remove('show');
+    cardView.innerHTML = '';
+  }
+}
+
+// ============================================================
+//  INPUT MANUAL MODAL
+// ============================================================
+function dateToExcelSerial(dateStr){
+  if (!dateStr) return null;
+  const parts = dateStr.split('-');
+  if (parts.length !== 3) return null;
+  const y = parseInt(parts[0], 10);
+  const m = parseInt(parts[1], 10) - 1;
+  const d = parseInt(parts[2], 10);
+  const utcMs = Date.UTC(y, m, d);
+  return Math.floor(utcMs / 86400000) + 25569;
+}
+
+function todayInputDate(){
+  const today = new Date();
+  const yyyy = today.getFullYear();
+  const mm = String(today.getMonth() + 1).padStart(2, '0');
+  const dd = String(today.getDate()).padStart(2, '0');
+  return `${yyyy}-${mm}-${dd}`;
+}
+
+function openInputModal(slotKey){
+  const modal = document.getElementById('inputModal');
+  const title = document.getElementById('modalTitle');
+  const form = document.getElementById('inputForm');
+  form.reset();
+  document.getElementById('inputSlot').value = slotKey;
+  document.getElementById('inpSudahBayar').value = '0';
+  document.getElementById('inpStatus').value = 'BELUM LUNAS';
+  document.getElementById('inpTglPelunasan').value = '';
+  title.textContent = slotKey === 'A' ? 'Input AR Minyak' : 'Input AR Rupa‑rupa';
+  document.getElementById('inpTglFaktur').value = todayInputDate();
+  modal.classList.add('show');
+  document.getElementById('inpSales').focus();
+}
+
+function closeInputModal(){
+  document.getElementById('inputModal').classList.remove('show');
+}
+
+document.getElementById('inputBtnA').addEventListener('click', () => {
+  closeMenuDropdown();
+  openInputModal('A');
+});
+document.getElementById('inputBtnB').addEventListener('click', () => {
+  closeMenuDropdown();
+  openInputModal('B');
+});
+document.getElementById('modalCloseBtn').addEventListener('click', closeInputModal);
+document.getElementById('modalCancelBtn').addEventListener('click', closeInputModal);
+document.getElementById('inputModal').addEventListener('click', function(e){
+  if (e.target === this) closeInputModal();
+});
+
+document.getElementById('inpStatus').addEventListener('change', function(){
+  if (this.value === 'SUDAH LUNAS'){
+    const el = document.getElementById('inpTglPelunasan');
+    if (!el.value) el.value = todayInputDate();
+  }
+});
+
+document.getElementById('inputForm').addEventListener('submit', async function(e){
+  e.preventDefault();
+  const slotKey = document.getElementById('inputSlot').value;
+  if (!slotKey || (slotKey !== 'A' && slotKey !== 'B')) return;
+
+  const sales = document.getElementById('inpSales').value.trim();
+  const noFaktur = document.getElementById('inpNoFaktur').value.trim();
+  const toko = document.getElementById('inpToko').value.trim();
+  const tglFakturStr = document.getElementById('inpTglFaktur').value;
+  const tglJatuhTempoStr = document.getElementById('inpTglJatuhTempo').value;
+  const nominalRaw = Number(document.getElementById('inpNominal').value);
+  let totalPayment = Number(document.getElementById('inpSudahBayar').value) || 0;
+  let status = document.getElementById('inpStatus').value;
+  let tglPelunasanStr = document.getElementById('inpTglPelunasan').value;
+
+  // FIX: validasi dasar
+  if (!sales || !noFaktur || !toko || !tglFakturStr || !tglJatuhTempoStr || !isFinite(nominalRaw) || nominalRaw <= 0){
+    alert('Mohon lengkapi field wajib: Sales, No Faktur, Toko, Tgl Faktur, Jatuh Tempo, dan Nominal > 0.');
+    return;
+  }
+  if (totalPayment < 0){
+    alert('Nilai "Sudah Dibayar" tidak boleh negatif.');
+    return;
+  }
+  // FIX: jatuh tempo tidak boleh sebelum tgl faktur
+  if (tglJatuhTempoStr < tglFakturStr){
+    alert('Tanggal Jatuh Tempo tidak boleh lebih awal dari Tanggal Faktur.');
+    return;
+  }
+
+  const nominal = Math.round(nominalRaw);
+  totalPayment = Math.round(totalPayment);
+
+  // FIX: kalau status LUNAS tapi belum dibayar penuh, konfirmasi & sesuaikan
+  if (normalizeStatus(status) === 'SUDAH LUNAS' && totalPayment < nominal){
+    const ok = confirm(
+      `Status "Sudah Lunas" tetapi "Sudah Dibayar" (Rp ${totalPayment.toLocaleString('id-ID')}) ` +
+      `lebih kecil dari Nominal (Rp ${nominal.toLocaleString('id-ID')}).\n\n` +
+      `OK = otomatis set Sudah Dibayar = Nominal (Rp ${nominal.toLocaleString('id-ID')})\n` +
+      `Cancel = batal simpan.`
+    );
+    if (!ok) return;
+    totalPayment = nominal;
+  }
+
+  // FIX: kalau totalPayment >= nominal, paksa status LUNAS
+  if (totalPayment >= nominal){
+    status = 'SUDAH LUNAS';
+    if (!tglPelunasanStr) tglPelunasanStr = todayInputDate();
+  }
+  if (normalizeStatus(status) === 'SUDAH LUNAS' && !tglPelunasanStr){
+    tglPelunasanStr = todayInputDate();
+  }
+  if (totalPayment > nominal){
+    if (!confirm(`Nilai "Sudah Dibayar" (Rp ${totalPayment.toLocaleString('id-ID')}) lebih besar dari Nominal (Rp ${nominal.toLocaleString('id-ID')}). Lanjutkan?`)) return;
+  }
+
+  const tglFaktur = dateToExcelSerial(tglFakturStr);
+  const tglJatuhTempo = dateToExcelSerial(tglJatuhTempoStr);
+  const tglPelunasan = tglPelunasanStr ? dateToExcelSerial(tglPelunasanStr) : null;
+  const sisaRiil = Math.max(nominal - totalPayment, 0);
+  const kategori = kategoriBaris(status, totalPayment, sisaRiil);
+  const label = slotKey === 'A' ? 'MINYAK' : 'RUPA-RUPA';
+
+  if (!state[slotKey]){
+    state[slotKey] = {
+      filename: '(input manual)',
+      label: label,
+      rows: [],
+      ts: new Date()
+    };
+  }
+
+  const newRow = {
+    no: state[slotKey].rows.length + 1,
+    sales: sales,
+    noFaktur: noFaktur,
+    toko: toko,
+    alamat: '',
+    tglFaktur: tglFaktur,
+    tglJatuhTempo: tglJatuhTempo,
+    tglPelunasan: tglPelunasan,
+    nominal: nominal,
+    saldoAwal: nominal,
+    totalPayment: totalPayment,
+    sisaRiil: sisaRiil,
+    kategori: kategori,
+    sumber: state[slotKey].label || label
+  };
+
+  state[slotKey].rows.push(newRow);
+  state[slotKey].ts = new Date();
+  if (!state[slotKey].label) state[slotKey].label = label;
+
+  await saveStateToStorage();
+  updateUploadStatus();
+  rebuildSumberFilter();
+  rebuildSalesFilter();
+  render();
+  closeInputModal();
+  showToast('Data berhasil disimpan.', 'success');
+});
+
+// ============================================================
+//  INIT (async — tunggu load dari IndexedDB selesai)
+// ============================================================
+(async function init(){
+  await loadStateFromStorage();
+  updateUploadStatus();
+  rebuildSumberFilter();
+  rebuildSalesFilter();
+  render();
+})();
+
+// ========== REGISTER SERVICE WORKER ==========
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('sw.js')
+    .then(() => console.log('✅ Service Worker terdaftar'))
+    .catch(err => console.log('❌ Service Worker gagal:', err));
+}
+</script>
+</body>
+</html>
