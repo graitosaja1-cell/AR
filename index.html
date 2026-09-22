@@ -345,6 +345,70 @@
   .tabbtn[data-cat="belum"].active{background:var(--red); border-color:var(--red); color:#fff;}
   .tabbtn[data-cat="titip"].active{background:var(--amber); border-color:var(--amber); color:#fff;}
   .tabbtn[data-cat="lunas"].active{background:var(--green); border-color:var(--green); color:#fff;}
+  .tabbtn[data-cat="ringkasan"].active{background:#7c3aed; border-color:#7c3aed; color:#fff;}
+
+  /* ---------- RINGKASAN ---------- */
+  .ringkasan-wrap{
+    background:var(--card-bg); backdrop-filter: blur(8px);
+    border:1px solid var(--border-color); border-radius: 8px;
+    box-shadow: var(--shadow); padding: 14px 16px 18px;
+  }
+  .ringkasan-header{
+    display:flex; align-items:flex-start; justify-content:space-between; flex-wrap:wrap;
+    gap:6px; margin-bottom:10px;
+  }
+  .ringkasan-title{
+    margin:0; font-size:14px; font-weight:800; letter-spacing:.01em;
+    color: var(--text-main); text-transform:uppercase;
+  }
+  .ringkasan-title .ringkasan-status{ color:var(--red); font-weight:700; }
+  .ringkasan-date{
+    font-family:'IBM Plex Mono', monospace; font-size:11px; color: var(--text-muted);
+    white-space:nowrap;
+  }
+  .ringkasan-subtabs{ display:flex; flex-wrap:wrap; gap:8px; margin-bottom:12px; }
+  .ringkasan-subtab{
+    font-family:'Inter', sans-serif; font-size:12px; font-weight:700;
+    color: var(--blue-main); background: transparent; border: 1.5px solid transparent;
+    padding: 5px 10px 5px 12px; border-radius: 999px; cursor:pointer;
+    display:inline-flex; align-items:center; gap:7px; transition: all .15s ease;
+  }
+  .ringkasan-subtab:hover{ background: var(--hover-bg); }
+  .ringkasan-subtab.active{
+    background: var(--blue-main); border-color: var(--blue-main); color:#fff;
+  }
+  .ringkasan-count{
+    font-family:'IBM Plex Mono', monospace; font-size:10.5px; font-weight:700;
+    background: rgba(0,0,0,0.08); color: inherit; border-radius: 999px;
+    padding: 1px 7px; min-width: 18px; text-align:center; line-height:1.5;
+  }
+  .ringkasan-subtab.active .ringkasan-count{ background: rgba(255,255,255,0.25); }
+  .ringkasan-tablewrap{ overflow:auto; border-radius: 8px; border:1px solid var(--border-color); }
+  table.ringkasan-table{ width:100%; border-collapse:collapse; font-size:12px; }
+  table.ringkasan-table thead th{
+    position:static; box-shadow:none; background: var(--accent-cyan); color:#fff;
+    font-family:'IBM Plex Mono', monospace; font-weight:700; font-size:10.5px;
+    letter-spacing:.03em; text-transform:uppercase; text-align:left; padding:8px 10px;
+    white-space:nowrap; border-bottom:none;
+  }
+  table.ringkasan-table thead th.num{ text-align:right; }
+  table.ringkasan-table tbody td{
+    padding:7px 10px; border-bottom:1px solid var(--table-border); white-space:nowrap;
+  }
+  table.ringkasan-table tbody tr:nth-child(even){ background:rgba(143,166,184,0.05); }
+  table.ringkasan-table tbody tr:hover{ background:var(--hover-bg); }
+  table.ringkasan-table td.num{ font-family:'IBM Plex Mono', monospace; text-align:right; }
+  table.ringkasan-table td.rk-toko{ white-space:normal; max-width:180px; }
+  table.ringkasan-table td.rk-sales{ color: var(--blue-main); font-weight:600; }
+  table.ringkasan-table td.rk-sisa{ color: var(--red); font-weight:700; }
+  table.ringkasan-table td.rk-umur{ color: var(--red); font-weight:700; }
+  .ringkasan-empty{
+    padding: 30px 10px; text-align:center; color: var(--text-muted); font-size:13px;
+  }
+  .ringkasan-foot{
+    margin-top:10px; font-size:10.5px; color: var(--text-muted);
+    font-family:'IBM Plex Mono', monospace;
+  }
 
   .searchbox{
     flex:1; min-width:180px;
@@ -876,7 +940,8 @@
 
   <!-- ===== CONTROLS ===== -->
   <div class="controls">
-    <button class="tabbtn active" data-cat="semua">SEMUA</button>
+    <button class="tabbtn" data-cat="semua">SEMUA</button>
+    <button class="tabbtn active" data-cat="ringkasan">RINGKASAN</button>
     <button class="tabbtn" data-cat="belum">BELUM LUNAS</button>
     <button class="tabbtn" data-cat="titip">TITIP</button>
     <button class="tabbtn" data-cat="lunas">SUDAH LUNAS</button>
@@ -938,6 +1003,34 @@
 
   <!-- ===== CARD VIEW ===== -->
   <div class="cardview" id="cardView"></div>
+
+  <!-- ===== RINGKASAN VIEW ===== -->
+  <div class="ringkasan-wrap" id="ringkasanView" style="display:none;">
+    <div class="ringkasan-header">
+      <h2 class="ringkasan-title">Ringkasan AR <span class="ringkasan-status">(status Belum Lunas)</span></h2>
+      <div class="ringkasan-date" id="ringkasanDate"></div>
+    </div>
+    <div class="ringkasan-subtabs" id="ringkasanSubtabs"></div>
+    <div class="ringkasan-tablewrap">
+      <table class="ringkasan-table" id="ringkasanTable">
+        <thead>
+          <tr>
+            <th>No</th>
+            <th>Sales</th>
+            <th>No Faktur</th>
+            <th>Toko</th>
+            <th>Tgl Faktur</th>
+            <th>Jatuh Tempo</th>
+            <th class="num">Sisa</th>
+            <th class="num" title="Umur Piutang (hari lewat jatuh tempo)">Umur (hari)</th>
+          </tr>
+        </thead>
+        <tbody id="ringkasanTbody"></tbody>
+      </table>
+    </div>
+    <div class="ringkasan-empty" id="ringkasanEmpty" style="display:none;">Tidak ada faktur belum lunas untuk kategori ini. 🎉</div>
+    <div class="ringkasan-foot" id="ringkasanFoot"></div>
+  </div>
 
   <!-- ===== EMPTY STATE ===== -->
   <div class="empty-state" id="emptyState" style="display:none;">
@@ -1934,7 +2027,8 @@ document.getElementById('clearAllBtn').addEventListener('click', function(){
 // ============================================================
 //  FILTER STATE
 // ============================================================
-let activeCat = 'semua';
+let activeCat = 'ringkasan';
+let ringkasanSumber = null;
 document.querySelectorAll('.tabbtn[data-cat]').forEach(btn => {
   btn.addEventListener('click', () => {
     document.querySelectorAll('.tabbtn[data-cat]').forEach(b=>b.classList.remove('active'));
@@ -2272,6 +2366,92 @@ function getFilteredRows(rows){
 }
 
 // ============================================================
+//  RINGKASAN (cara cepat lihat piutang tertua per kategori)
+// ============================================================
+const RINGKASAN_LIMIT = 10;
+
+function renderRingkasan(belum){
+  // Urutan sub-tab: label slot A & B dulu (MINYAK, RUPA-RUPA), lalu sumber lain yg mungkin ada.
+  const sumberOrder = [];
+  ['A','B'].forEach(k => {
+    if (state[k] && state[k].label && !sumberOrder.includes(state[k].label)) sumberOrder.push(state[k].label);
+  });
+  belum.forEach(r => { if (r.sumber && !sumberOrder.includes(r.sumber)) sumberOrder.push(r.sumber); });
+  if (sumberOrder.length === 0) sumberOrder.push('SEMUA');
+
+  if (!ringkasanSumber || !sumberOrder.includes(ringkasanSumber)){
+    ringkasanSumber = sumberOrder[0];
+  }
+
+  // Hitung jumlah faktur belum lunas per kategori, buat badge di sub-tab.
+  const countMap = {};
+  belum.forEach(r => { countMap[r.sumber] = (countMap[r.sumber] || 0) + 1; });
+
+  const subtabsEl = document.getElementById('ringkasanSubtabs');
+  subtabsEl.innerHTML = sumberOrder.map(s => {
+    const cnt = countMap[s] || 0;
+    const active = s === ringkasanSumber ? 'active' : '';
+    return `<button type="button" class="ringkasan-subtab ${active}" data-sumber="${escapeHtml(s)}">${escapeHtml(s)}<span class="ringkasan-count">${cnt}</span></button>`;
+  }).join('');
+  subtabsEl.querySelectorAll('.ringkasan-subtab').forEach(btn => {
+    btn.addEventListener('click', () => {
+      ringkasanSumber = btn.dataset.sumber;
+      render();
+    });
+  });
+
+  document.getElementById('ringkasanDate').textContent = `data tgl : ${todayStr()}`;
+
+  const rowsCat = belum
+    .filter(r => r.sumber === ringkasanSumber)
+    .slice()
+    .sort((a, b) => {
+      const ua = umurPiutangHari(a.tglJatuhTempo);
+      const ub = umurPiutangHari(b.tglJatuhTempo);
+      return (ub === null ? -Infinity : ub) - (ua === null ? -Infinity : ua);
+    });
+
+  const filtered = rowsCat.slice(0, RINGKASAN_LIMIT);
+
+  const tbody = document.getElementById('ringkasanTbody');
+  const emptyEl = document.getElementById('ringkasanEmpty');
+  const tableWrapEl = document.querySelector('.ringkasan-tablewrap');
+  const footEl = document.getElementById('ringkasanFoot');
+
+  if (filtered.length === 0){
+    tbody.innerHTML = '';
+    tableWrapEl.style.display = 'none';
+    emptyEl.style.display = 'block';
+    footEl.textContent = '';
+    return;
+  }
+  tableWrapEl.style.display = '';
+  emptyEl.style.display = 'none';
+
+  tbody.innerHTML = filtered.map((r, idx) => {
+    const d = umurPiutangHari(r.tglJatuhTempo);
+    const umurText = d === null ? '-' : `${d}`;
+    return `
+    <tr>
+      <td>${idx + 1}</td>
+      <td class="rk-sales">${escapeHtml(r.sales)}</td>
+      <td>${escapeHtml(String(r.noFaktur))}</td>
+      <td class="rk-toko">${escapeHtml(r.toko)}</td>
+      <td>${fmtDate(r.tglFaktur)}</td>
+      <td>${fmtDate(r.tglJatuhTempo)}</td>
+      <td class="num rk-sisa">${Math.round(r.sisaRiil).toLocaleString('id-ID')}</td>
+      <td class="num rk-umur">${umurText}</td>
+    </tr>`;
+  }).join('');
+
+  const totalCat = rowsCat.length;
+  const sisaTotalCat = rowsCat.reduce((a, r) => a + r.sisaRiil, 0);
+  footEl.textContent = totalCat > RINGKASAN_LIMIT
+    ? `Menampilkan ${RINGKASAN_LIMIT} faktur tertua dari total ${totalCat} faktur belum lunas (${ringkasanSumber}) \u00b7 total sisa kategori ini: Rp ${Math.round(sisaTotalCat).toLocaleString('id-ID')}`
+    : `Total ${totalCat} faktur belum lunas (${ringkasanSumber}) \u00b7 total sisa: Rp ${Math.round(sisaTotalCat).toLocaleString('id-ID')}`;
+}
+
+// ============================================================
 //  RENDER
 // ============================================================
 function render(){
@@ -2288,6 +2468,19 @@ function render(){
     periodeEl.textContent = (min && max)
       ? `Periode data (berdasarkan tgl faktur di file yang diupload): ${fmtDateFromDateObj(min)} \u2013 ${fmtDateFromDateObj(max)}`
       : '';
+  }
+
+  const isRingkasan = activeCat === 'ringkasan';
+  document.querySelector('.controls').style.display = isRingkasan ? 'none' : '';
+  document.getElementById('ringkasanView').style.display = isRingkasan ? '' : 'none';
+  if (isRingkasan){
+    periodeEl.style.display = 'none';
+    document.getElementById('tableWrap').style.display = 'none';
+    document.getElementById('cardView').style.display = 'none';
+    document.getElementById('cardView').classList.remove('show');
+    document.getElementById('emptyState').style.display = 'none';
+  } else {
+    periodeEl.style.display = '';
   }
 
   const sum = (arr, f) => arr.reduce((a,r)=>a+f(r),0);
@@ -2312,6 +2505,11 @@ function render(){
   const diterimaMap = {};
   [lunas, titip].forEach(arr => arr.forEach(r => { diterimaMap[r.sumber] = (diterimaMap[r.sumber]||0) + r.totalPayment; }));
   document.getElementById('totDiterimaBreakdown').innerHTML = fmtBreakdown(diterimaMap);
+
+  if (isRingkasan){
+    renderRingkasan(belum);
+    return;
+  }
 
   let filtered = getFilteredRows(rows);
 
