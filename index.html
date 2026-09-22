@@ -353,20 +353,20 @@
     border:1px solid var(--border-color); border-radius: 8px;
     box-shadow: var(--shadow); padding: 14px 16px 18px;
   }
-  .ringkasan-header{
-    display:flex; align-items:flex-start; justify-content:space-between; flex-wrap:wrap;
-    gap:6px; margin-bottom:10px;
+  .ringkasan-toprow{
+    display:flex; align-items:center; flex-wrap:wrap;
+    gap:10px 16px; margin-bottom:14px;
   }
   .ringkasan-title{
     margin:0; font-size:14px; font-weight:800; letter-spacing:.01em;
-    color: var(--text-main); text-transform:uppercase;
+    color: var(--text-main); text-transform:uppercase; white-space:nowrap;
   }
   .ringkasan-title .ringkasan-status{ color:var(--red); font-weight:700; }
   .ringkasan-date{
     font-family:'IBM Plex Mono', monospace; font-size:11px; color: var(--text-muted);
-    white-space:nowrap;
+    white-space:nowrap; margin-left:auto;
   }
-  .ringkasan-subtabs{ display:flex; flex-wrap:wrap; gap:8px; margin-bottom:12px; }
+  .ringkasan-subtabs{ display:flex; flex-wrap:wrap; gap:8px; }
   .ringkasan-subtab{
     font-family:'Inter', sans-serif; font-size:12px; font-weight:700;
     color: var(--blue-main); background: transparent; border: 1.5px solid transparent;
@@ -1012,11 +1012,11 @@
 
   <!-- ===== RINGKASAN VIEW ===== -->
   <div class="ringkasan-wrap" id="ringkasanView" style="display:none;">
-    <div class="ringkasan-header">
+    <div class="ringkasan-toprow">
       <h2 class="ringkasan-title">Ringkasan AR <span class="ringkasan-status">(status Belum Lunas)</span></h2>
+      <div class="ringkasan-subtabs" id="ringkasanSubtabs"></div>
       <div class="ringkasan-date" id="ringkasanDate"></div>
     </div>
-    <div class="ringkasan-subtabs" id="ringkasanSubtabs"></div>
     <div class="ringkasan-tablewrap">
       <table class="ringkasan-table" id="ringkasanTable">
         <thead>
