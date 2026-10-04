@@ -286,7 +286,15 @@ const A = {
 };
 
 /* ---------- UI ---------- */
-function msg(t, err) { const m = $('#bkMsg'); m.textContent = t; m.className = err ? 'err' : ''; m.style.display = 'block'; m.style.whiteSpace = 'pre-line'; }
+function msg(t, err) {
+  const m = $('#bkMsg'); m.textContent = t; m.className = err ? 'err' : ''; m.style.display = 'block'; m.style.whiteSpace = 'pre-line';
+  const ok = /^✅/.test(t), busy = /\.\.\.$/.test(t);
+  let b = document.getElementById('bkToast');
+  if (!b) { b = document.createElement('div'); b.id = 'bkToast'; document.body.appendChild(b); }
+  b.textContent = t;
+  b.style.cssText = 'position:fixed;top:14px;left:50%;transform:translateX(-50%);z-index:100000;max-width:92vw;white-space:pre-line;text-align:center;padding:12px 18px;border-radius:10px;font:600 .85rem Segoe UI,Arial,sans-serif;color:#fff;box-shadow:0 6px 24px rgba(0,0,0,.4);background:' + (err ? '#b91c1c' : ok ? '#047857' : '#1f4e8c');
+  clearTimeout(b._t); b._t = setTimeout(() => b.remove(), err ? 7000 : busy ? 60000 : 5000);
+}
 async function status() {
   const h = HAS_DIR ? await getH().catch(() => null) : null;
   $('#bkStat').textContent = (LS.getItem('bkLast') ? 'Backup terakhir: ' + fmtT(LS.getItem('bkLast')) : 'Belum pernah backup.') + ' • ' + (!HAS_DIR ? 'Browser ini tidak bisa pilih folder (pakai Unduh/Restore File).' : h ? 'Folder: ' + h.name : 'Folder Google Drive belum dipilih.');
