@@ -1,71 +1,35 @@
-// Service Worker - Buku Piutang Harian (AR Minyak)
-const CACHE_NAME = 'ar-minyak-cache-v2';
-const CORE_ASSETS = [
-  './',
-  './index.html',
-  './manifest.json',
-  './icon-192.png',
-  './icon-512.png',
-  './icon-maskable-192.png',
-  './icon-maskable-512.png',
-  './apple-touch-icon.png'
-];
+/* Service worker — Laporan PWA. Naikkan nomor VERSI bila ingin memaksa cache lama dibuang. */
+const VERSI = 'laporan-v1';
+const INTI = ['./', 'index.html', 'manifest.webmanifest', 'icons/icon-192.png', 'icons/icon-512.png'];
+const HOST_LUAR = /(^|\.)jsdelivr\.net$|^fonts\.googleapis\.com$|^fonts\.gstatic\.com$/;
 
-// Install: cache file-file inti aplikasi
-self.addEventListener('install', (event) => {
-  event.waitUntil(
-    caches.open(CACHE_NAME)
-      .then((cache) => cache.addAll(CORE_ASSETS))
-      .then(() => self.skipWaiting())
-  );
+self.addEventListener('install', e => {
+  e.waitUntil(caches.open(VERSI).then(c => c.addAll(INTI)).then(() => self.skipWaiting()));
 });
-
-// Activate: bersihkan cache versi lama
-self.addEventListener('activate', (event) => {
-  event.waitUntil(
-    caches.keys().then((keys) =>
-      Promise.all(
-        keys
-          .filter((key) => key !== CACHE_NAME)
-          .map((key) => caches.delete(key))
-      )
-    ).then(() => self.clients.claim())
-  );
+self.addEventListener('activate', e => {
+  e.waitUntil(caches.keys()
+    .then(ks => Promise.all(ks.filter(k => k !== VERSI).map(k => caches.delete(k))))
+    .then(() => self.clients.claim()));
 });
-
-// Fetch: cache-first untuk asset inti, network-first untuk sisanya (CDN font/xlsx dll)
-self.addEventListener('fetch', (event) => {
-  const req = event.request;
-
-  // Hanya tangani GET request
+self.addEventListener('fetch', e => {
+  const req = e.request;
   if (req.method !== 'GET') return;
-
-  const url = new URL(req.url);
-  const isSameOrigin = url.origin === self.location.origin;
-
-  if (isSameOrigin) {
-    // Cache-first untuk file aplikasi sendiri (HTML/JSON/PNG)
-    event.respondWith(
-      caches.match(req).then((cached) => {
-        if (cached) return cached;
-        return fetch(req).then((res) => {
-          const resClone = res.clone();
-          caches.open(CACHE_NAME).then((cache) => cache.put(req, resClone));
-          return res;
-        }).catch(() => cached);
-      })
-    );
-  } else {
-    // Network-first untuk resource eksternal (Google Fonts, xlsx.js CDN),
-    // fallback ke cache kalau offline
-    event.respondWith(
-      fetch(req)
-        .then((res) => {
-          const resClone = res.clone();
-          caches.open(CACHE_NAME).then((cache) => cache.put(req, resClone));
-          return res;
-        })
-        .catch(() => caches.match(req))
-    );
+  const u = new URL(req.url);
+  /* Halaman utama: ambil versi terbaru dari jaringan, cadangan dari cache bila offline */
+  if (req.mode === 'navigate') {
+    e.respondWith(fetch(req).then(res => {
+      if (res && res.ok) { const salin = res.clone(); caches.open(VERSI).then(c => c.put('index.html', salin)); }
+      return res;
+    }).catch(() => caches.match('index.html', { ignoreSearch: true })));
+    return;
   }
+  /* File sendiri + pustaka CDN (XLSX, font): pakai cache dulu, perbarui di belakang layar */
+  if (u.origin !== location.origin && !HOST_LUAR.test(u.hostname)) return;
+  e.respondWith(caches.match(req).then(hit => {
+    const jaringan = fetch(req).then(res => {
+      if (res && (res.ok || res.type === 'opaque')) { const salin = res.clone(); caches.open(VERSI).then(c => c.put(req, salin)); }
+      return res;
+    }).catch(() => hit);
+    return hit || jaringan;
+  }));
 });
