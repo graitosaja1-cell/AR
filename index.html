@@ -37,6 +37,21 @@
   .theme-btn { margin-left: auto; align-self: center; margin-bottom: 3px; background: rgba(255,255,255,.15); color: #fff; border: none;
     padding: 3px 12px; font-size: .78rem; font-weight: 600; border-radius: 5px; cursor: pointer; }
   .theme-btn:hover { background: rgba(255,255,255,.3); }
+  .bk-open{margin-left:auto;align-self:center;margin-bottom:3px;background:rgba(255,255,255,.15);color:#fff;border:none;padding:3px 12px;font-size:.78rem;font-weight:600;border-radius:5px;cursor:pointer}
+  .bk-open:hover{background:rgba(255,255,255,.3)} .bk-open+.theme-btn{margin-left:6px}
+  .bk-ov{--bg:#fff;--tx:#1e293b;--mu:#64748b;--bd:#d6dde8;--pr:#1f4e8c;display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.55);align-items:center;justify-content:center;padding:12px}
+  :root[data-theme=dark] .bk-ov{--bg:#161b22;--tx:#e6edf3;--mu:#8b949e;--bd:#30363d;--pr:#2f5fa8}
+  .bk-ov.show{display:flex}
+  .bk-box{background:var(--bg);color:var(--tx);width:min(100%,340px);max-height:94vh;overflow:auto;border-radius:12px;padding:14px;border:1px solid var(--bd);font-size:.78rem;line-height:1.45}
+  .bk-box h3{font-size:.9rem;margin:2px 0 6px;display:flex;justify-content:space-between;align-items:center}
+  .bk-box h3 button{background:none;border:0;color:var(--mu);font-size:1.1rem;cursor:pointer}
+  .bk-box .mu{color:var(--mu);font-size:.72rem}
+  .bk-b{display:block;width:100%;text-align:left;padding:9px 12px;margin:6px 0;border:1px solid var(--bd);border-radius:8px;background:transparent;color:var(--tx);font:600 .8rem inherit;font-family:inherit;cursor:pointer}
+  .bk-b.p{background:var(--pr);color:#fff;border-color:var(--pr)} .bk-b:disabled{opacity:.45;cursor:not-allowed}
+  .bk-hr{border:0;border-top:1px solid var(--bd);margin:12px 0}
+  #bkMsg{margin-top:8px;padding:7px 9px;border-radius:7px;background:rgba(37,99,235,.12);display:none;word-break:break-word}
+  #bkMsg.err{background:rgba(220,38,38,.14);color:#dc2626}
+  .bk-lnk{background:none;border:0;color:var(--pr);text-decoration:underline;cursor:pointer;font-size:.72rem;padding:0}
 </style>
 </head>
 <body>
@@ -46,6 +61,7 @@
   <button class="main-tab" data-tab="cek">✅ Cek</button>
   <button class="main-tab" data-tab="ar">📋 AR</button>
   <button class="main-tab" data-tab="arcek">🔎 AR-CEK</button>
+  <button class="bk-open" id="bkOpen" title="Backup, Restore & Sync antar-device">☁️ Backup / Sync</button>
   <button class="theme-btn" id="themeBtn" title="Ganti mode gelap / terang (semua tab)">☀️ Terang</button>
 </div>
 <div class="frames">
@@ -99,6 +115,202 @@ applyThemeAll(currentTheme());
 if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1')) {
   window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
 }
+</script>
+<div class="bk-ov" id="bkOv"><div class="bk-box">
+<h3>💾 Backup &amp; Restore Semua Data <button data-a="close" title="Tutup">✕</button></h3>
+<div class="mu" id="bkStat"></div>
+<button class="bk-b" data-a="pick" data-dir>🔗 Pilih Folder Google Drive (sekali saja)</button>
+<button class="bk-b p" data-a="bkDrive" data-dir>💾 Backup Sekarang ke Google Drive</button>
+<button class="bk-b" data-a="bkFile">⬇️ Unduh File Backup (manual)</button>
+<button class="bk-b" data-a="rsDrive" data-dir>♻️ Restore dari Folder Google Drive</button>
+<button class="bk-b" data-a="rsFile">📁 Restore dari File Backup...</button>
+<div class="mu">Backup mencakup: Rekap Penjualan, Rekap Uang Masuk, data AR, dan tanda Batal/Lunas (AR-CEK). Gunakan "Restore" jika terjadi error atau data hilang.</div>
+<hr class="bk-hr">
+<h3>☁️ Sync Antar-Device (Cloud)</h3>
+<div class="mu" id="syStat"></div>
+<button class="bk-b p" data-a="up">⬆️ Upload Data Device Ini ke Cloud</button>
+<button class="bk-b" data-a="down">⬇️ Ambil Data Terbaru dari Cloud</button>
+<div class="mu">Gunakan "Upload" setelah selesai kerja di device ini, dan "Ambil" sebelum mulai kerja di device lain, supaya data selalu sinkron. Data terbaru akan MENIMPA data di device tujuan. <button class="bk-lnk" data-a="code">Ganti Kode Sinkron</button></div>
+<div id="bkMsg"></div>
+<input type="file" id="bkFile" hidden>
+</div></div>
+<script>
+(() => {
+const SB = 'https://bgirwwqozezibrwghtla.supabase.co', KEY = 'sb_publishable_iRCAzy0QB7QO8OMAG-dV_Q_2IwvX1Kl';
+const DBS = [
+  { k: 'penjualan', db: 'laporan-penjualan-db', st: 'data' },
+  { k: 'uangmasuk', db: 'um-fixv1', st: 'um-data' },
+  { k: 'ar', db: 'piutangHarianDB', st: 'slots', kp: 'slot' }
+];
+const $ = s => document.querySelector(s), LS = localStorage, CHUNK = 900000, PFX = 'Backup_Laporan_';
+const HAS_DIR = 'showDirectoryPicker' in window, HAS_GZ = typeof CompressionStream !== 'undefined';
+const fmtT = t => t ? new Date(t).toLocaleString('id-ID', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '-';
+const rq = r => new Promise((ok, no) => { r.onsuccess = () => ok(r.result); r.onerror = () => no(r.error); });
+const txd = t => new Promise((ok, no) => { t.oncomplete = ok; t.onerror = t.onabort = () => no(t.error); });
+const idb = (d, s, kp) => new Promise((ok, no) => {
+  const r = indexedDB.open(d, 1);
+  r.onupgradeneeded = () => { if (!r.result.objectStoreNames.contains(s)) r.result.createObjectStore(s, kp ? { keyPath: kp } : undefined); };
+  r.onsuccess = () => ok(r.result); r.onerror = () => no(r.error);
+});
+const utf8 = s => new TextEncoder().encode(s);
+const enc = o => JSON.stringify(o, function (k, v) { const x = this[k]; return x instanceof Date ? { $d: isNaN(x) ? null : x.getTime() } : v; });
+const dec = t => JSON.parse(t, (k, v) => v && typeof v === 'object' && Object.keys(v).length === 1 && '$d' in v ? new Date(v.$d == null ? NaN : v.$d) : v);
+const pipe = async (u, S) => new Uint8Array(await new Response(new Blob([u]).stream().pipeThrough(new S('gzip'))).arrayBuffer());
+const b64 = u => new Promise(r => { const f = new FileReader(); f.onload = () => r(f.result.split(',')[1]); f.readAsDataURL(new Blob([u])); });
+const unb64 = async s => new Uint8Array(await (await fetch('data:application/octet-stream;base64,' + s)).arrayBuffer());
+
+/* ---------- snapshot / apply ---------- */
+async function snap() {
+  const o = { v: 1, at: new Date().toISOString(), marks: LS.getItem('arcekMarks'), d: {} };
+  for (const c of DBS) {
+    const db = await idb(c.db, c.st, c.kp), s = db.transaction(c.st).objectStore(c.st);
+    o.d[c.k] = await rq(c.kp ? s.getAll() : s.get('latest')); db.close();
+  }
+  return o;
+}
+async function apply(o) {
+  for (const c of DBS) {
+    const db = await idb(c.db, c.st, c.kp), tx = db.transaction(c.st, 'readwrite'), s = tx.objectStore(c.st), v = o.d[c.k];
+    s.clear();
+    if (c.kp) (v || []).forEach(x => s.put(x)); else if (v) s.put(v, 'latest');
+    await txd(tx); db.close();
+  }
+  if (o.marks != null) LS.setItem('arcekMarks', o.marks);
+}
+function cnt(o) {
+  const d = o.d, n = (x, k) => (x && x[k] ? x[k].length : 0);
+  return { p: n(d.penjualan, 'rawData'), u: n(d.uangmasuk, 'records'), a: (d.ar || []).reduce((s, x) => s + (x.rows || []).length, 0) };
+}
+const sum = o => { const c = cnt(o); return `Penjualan: ${c.p.toLocaleString('id-ID')} baris\nUang Masuk: ${c.u.toLocaleString('id-ID')} baris\nAR: ${c.a.toLocaleString('id-ID')} faktur`; };
+const isEmpty = o => { const c = cnt(o); return !c.p && !c.u && !c.a; };
+async function pack(o) { const u = utf8(enc(o)); return HAS_GZ ? pipe(u, CompressionStream) : u; }
+async function unpack(u) {
+  if (u[0] === 0x1f && u[1] === 0x8b) u = await pipe(u, DecompressionStream);
+  const o = dec(new TextDecoder().decode(u));
+  if (!o || !o.d) throw new Error('File bukan backup Laporan yang valid.');
+  return o;
+}
+const stamp = () => { const d = new Date(), p = n => String(n).padStart(2, '0'); return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}_${p(d.getHours())}${p(d.getMinutes())}`; };
+
+/* ---------- folder Google Drive (File System Access API) ---------- */
+const hdb = () => idb('bk-handles', 'h');
+async function getH() { const db = await hdb(), h = await rq(db.transaction('h').objectStore('h').get('dir')); db.close(); return h || null; }
+async function setH(h) { const db = await hdb(), t = db.transaction('h', 'readwrite'); t.objectStore('h').put(h, 'dir'); await txd(t); db.close(); }
+async function getDir(ask) {
+  const h = await getH(); if (!h) return null;
+  let p = await h.queryPermission({ mode: 'readwrite' });
+  if (p !== 'granted' && ask) p = await h.requestPermission({ mode: 'readwrite' });
+  return p === 'granted' ? h : null;
+}
+async function saveFile(name, bytes) { const dir = await getDir(true); if (!dir) throw new Error('Folder belum dipilih / izin ditolak. Pilih folder dulu.'); const fh = await dir.getFileHandle(name, { create: true }), w = await fh.createWritable(); await w.write(bytes); await w.close(); return dir; }
+
+/* ---------- Supabase REST ---------- */
+async function sb(path, opt = {}) {
+  const r = await fetch(SB + '/rest/v1/' + path, { ...opt, headers: { apikey: KEY, 'Content-Type': 'application/json', ...(opt.headers || {}) } });
+  if (!r.ok) { const t = await r.text(); throw new Error(/PGRST205|does not exist|42P01/.test(t) ? 'TABEL_BELUM_ADA' : r.status + ' ' + t.slice(0, 160)); }
+  const t = await r.text(); return t ? JSON.parse(t) : null;
+}
+async function ckey(c) {
+  const b = await crypto.subtle.importKey('raw', utf8(c), 'PBKDF2', false, ['deriveKey']);
+  return crypto.subtle.deriveKey({ name: 'PBKDF2', salt: utf8('laporan-sync-v1'), iterations: 120000, hash: 'SHA-256' }, b, { name: 'AES-GCM', length: 256 }, false, ['encrypt', 'decrypt']);
+}
+async function nsOf(c) { const h = new Uint8Array(await crypto.subtle.digest('SHA-256', utf8('ns:' + c))); return [...h].slice(0, 12).map(x => x.toString(16).padStart(2, '0')).join(''); }
+async function seal(u, c) { const iv = crypto.getRandomValues(new Uint8Array(12)), e = new Uint8Array(await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, await ckey(c), u)), o = new Uint8Array(12 + e.length); o.set(iv); o.set(e, 12); return o; }
+async function unseal(u, c) { try { return new Uint8Array(await crypto.subtle.decrypt({ name: 'AES-GCM', iv: u.slice(0, 12) }, await ckey(c), u.slice(12))); } catch (e) { throw new Error('Kode Sinkron salah / data rusak.'); } }
+function getCode(force) {
+  let c = force ? null : LS.getItem('syncCode');
+  if (!c) { c = (prompt('Masukkan KODE SINKRON (rahasia, minimal 6 karakter).\nGunakan kode yang SAMA di semua device. Data di cloud dienkripsi dengan kode ini.') || '').trim(); if (c.length < 6) throw new Error('Kode Sinkron minimal 6 karakter.'); LS.setItem('syncCode', c); }
+  return c;
+}
+async function cloudMeta(c) {
+  const r = await sb(`laporan_sync?select=ver,data&ns=eq.${await nsOf(c)}&part=eq.-1&order=ver.desc&limit=1`);
+  return r && r[0] ? { ver: r[0].ver, ...JSON.parse(r[0].data) } : null;
+}
+async function upload() {
+  const code = getCode(), o = await snap();
+  if (isEmpty(o)) throw new Error('Device ini belum punya data. Upload dibatalkan supaya data di cloud tidak tertimpa kosong.');
+  msg('Menyiapkan data...');
+  const s = await b64(await seal(await pack(o), code)), ns = await nsOf(code), ver = new Date().toISOString(), n = Math.ceil(s.length / CHUNK);
+  for (let i = 0; i < n; i++) {
+    msg(`Mengunggah ${i + 1}/${n}...`);
+    await sb('laporan_sync', { method: 'POST', headers: { Prefer: 'return=minimal' }, body: JSON.stringify([{ ns, ver, part: i, data: s.slice(i * CHUNK, (i + 1) * CHUNK) }]) });
+  }
+  await sb('laporan_sync', { method: 'POST', headers: { Prefer: 'return=minimal' }, body: JSON.stringify([{ ns, ver, part: -1, data: JSON.stringify({ n, at: ver }) }]) });
+  await sb(`laporan_sync?ns=eq.${ns}&ver=lt.${encodeURIComponent(ver)}`, { method: 'DELETE' }).catch(() => {});
+  LS.setItem('syncLast', ver); msg('✅ Upload ke cloud berhasil.\n' + sum(o));
+}
+async function download() {
+  const code = getCode(), m = await cloudMeta(code);
+  if (!m) throw new Error('Belum ada data di cloud untuk Kode Sinkron ini.');
+  msg('Mengambil data dari cloud...');
+  const rows = await sb(`laporan_sync?select=part,data&ns=eq.${await nsOf(code)}&ver=eq.${encodeURIComponent(m.ver)}&part=gte.0&order=part`);
+  if (!rows || rows.length !== m.n) throw new Error('Data cloud belum lengkap, coba lagi.');
+  const o = await unpack(await unseal(await unb64(rows.map(r => r.data).join('')), code));
+  if (!confirm(`Ambil data dari cloud (${fmtT(m.ver)})?\n\n${sum(o)}\n\nData di device ini akan DITIMPA.`)) return msg('Dibatalkan.');
+  await apply(o); LS.setItem('syncLast', m.ver); msg('✅ Selesai. Memuat ulang...'); setTimeout(() => location.reload(), 700);
+}
+
+/* ---------- aksi backup ---------- */
+async function restoreFrom(bytes, label) {
+  const o = await unpack(bytes);
+  if (!confirm(`Restore dari ${label} (backup ${fmtT(o.at)})?\n\n${sum(o)}\n\nData di device ini akan DITIMPA.`)) return msg('Dibatalkan.');
+  await apply(o); msg('✅ Restore selesai. Memuat ulang...'); setTimeout(() => location.reload(), 700);
+}
+const A = {
+  close: () => $('#bkOv').classList.remove('show'),
+  async pick() { const h = await showDirectoryPicker({ mode: 'readwrite' }); await setH(h); msg('Folder dipilih: ' + h.name); },
+  async bkDrive() {
+    const dir = await getDir(true); if (!dir) throw new Error('Folder belum dipilih / izin ditolak.');
+    const o = await snap(); if (isEmpty(o)) throw new Error('Belum ada data untuk dibackup.');
+    await saveFile(`${PFX}${stamp()}.laporan`, await pack(o));
+    const names = []; for await (const [n] of dir.entries()) if (n.startsWith(PFX)) names.push(n);
+    names.sort(); for (const n of names.slice(0, -10)) await dir.removeEntry(n).catch(() => {});
+    LS.setItem('bkLast', new Date().toISOString()); msg('✅ Backup ke Google Drive berhasil.\n' + sum(o));
+  },
+  async bkFile() {
+    const o = await snap(); if (isEmpty(o)) throw new Error('Belum ada data untuk dibackup.');
+    const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([await pack(o)], { type: 'application/octet-stream' }));
+    a.download = `${PFX}${stamp()}.laporan`; document.body.appendChild(a); a.click(); a.remove();
+    LS.setItem('bkLast', new Date().toISOString()); msg('✅ File backup diunduh.\n' + sum(o));
+  },
+  async rsDrive() {
+    const dir = await getDir(true); if (!dir) throw new Error('Folder belum dipilih / izin ditolak.');
+    const names = []; for await (const [n] of dir.entries()) if (n.startsWith(PFX)) names.push(n);
+    if (!names.length) throw new Error('Tidak ada file backup di folder ini.');
+    names.sort(); const f = await (await dir.getFileHandle(names.pop())).getFile();
+    await restoreFrom(new Uint8Array(await f.arrayBuffer()), 'folder Google Drive');
+  },
+  rsFile() { $('#bkFile').value = ''; $('#bkFile').click(); },
+  up: upload, down: download,
+  async code() { const c = getCode(true); msg('Kode Sinkron disimpan.'); }
+};
+
+/* ---------- UI ---------- */
+function msg(t, err) { const m = $('#bkMsg'); m.textContent = t; m.className = err ? 'err' : ''; m.style.display = 'block'; m.style.whiteSpace = 'pre-line'; }
+async function status() {
+  const h = HAS_DIR ? await getH().catch(() => null) : null;
+  $('#bkStat').textContent = (LS.getItem('bkLast') ? 'Backup terakhir: ' + fmtT(LS.getItem('bkLast')) : 'Belum pernah backup.') + ' • ' + (!HAS_DIR ? 'Browser ini tidak bisa pilih folder (pakai Unduh/Restore File).' : h ? 'Folder: ' + h.name : 'Folder Google Drive belum dipilih.');
+  document.querySelectorAll('[data-dir]').forEach(b => b.disabled = !HAS_DIR);
+  const loc = LS.getItem('syncLast'); let cl = '-';
+  const c = LS.getItem('syncCode');
+  if (!c) cl = 'Kode Sinkron belum diatur';
+  else try { const m = await cloudMeta(c); cl = m ? fmtT(m.ver) : 'belum ada'; } catch (e) { cl = e.message === 'TABEL_BELUM_ADA' ? 'tabel Supabase belum dibuat' : 'tidak terhubung'; }
+  $('#syStat').textContent = `Sync terakhir di device ini: ${fmtT(loc)} • Data di Cloud: ${cl}`;
+}
+$('#bkOpen').addEventListener('click', () => { $('#bkOv').classList.add('show'); $('#bkMsg').style.display = 'none'; status(); });
+$('#bkOv').addEventListener('click', async e => {
+  if (e.target.id === 'bkOv') return A.close();
+  const b = e.target.closest('[data-a]'); if (!b || !A[b.dataset.a]) return;
+  const all = document.querySelectorAll('.bk-b'); all.forEach(x => x.disabled = true);
+  try { await A[b.dataset.a](); }
+  catch (err) { if (err && err.name === 'AbortError') msg('Dibatalkan.'); else msg(err.message === 'TABEL_BELUM_ADA' ? 'Tabel Supabase "laporan_sync" belum dibuat. Jalankan SQL setup di Supabase dulu.' : '⚠️ ' + (err.message || err), true); }
+  finally { all.forEach(x => x.disabled = false); status(); }
+});
+$('#bkFile').addEventListener('change', async e => {
+  const f = e.target.files[0]; if (!f) return;
+  try { await restoreFrom(new Uint8Array(await f.arrayBuffer()), 'file ' + f.name); } catch (err) { msg('⚠️ ' + err.message, true); }
+});
+})();
 </script>
 </body>
 </html>
