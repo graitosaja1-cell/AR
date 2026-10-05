@@ -130,7 +130,8 @@ if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.
 <div class="mu" id="syStat"></div>
 <button class="bk-b p" data-a="up">⬆️ Upload Data Device Ini ke Cloud</button>
 <button class="bk-b" data-a="down">⬇️ Ambil Data Terbaru dari Cloud</button>
-<div class="mu">Gunakan "Upload" setelah selesai kerja di device ini, dan "Ambil" sebelum mulai kerja di device lain, supaya data selalu sinkron. Data terbaru akan MENIMPA data di device tujuan. <button class="bk-lnk" data-a="code">Ganti Kode Sinkron</button></div>
+<button class="bk-b" data-a="auto" id="bkAuto"></button>
+<div class="mu"><b>Sinkron otomatis</b> (aktif setelah Kode Sinkron diisi, cukup sekali lewat tombol Upload): perubahan di device ini dikirim ke cloud ±20 detik setelah selesai, dan saat aplikasi dibuka data terbaru dari cloud diambil otomatis bila device ini tidak punya perubahan yang belum terkirim. Jika cloud dan device sama-sama berubah, Anda akan ditanya data mana yang dipakai. Tombol Upload/Ambil manual tetap bisa dipakai (data terbaru MENIMPA data di device tujuan). <button class="bk-lnk" data-a="code">Ganti Kode Sinkron</button></div>
 <div id="bkMsg"></div>
 <input type="file" id="bkFile" hidden>
 </div></div>
@@ -142,6 +143,7 @@ const DBS = [
   { k: 'uangmasuk', db: 'um-fixv1', st: 'um-data' },
   { k: 'ar', db: 'piutangHarianDB', st: 'slots', kp: 'slot' }
 ];
+let QUIET = false;
 const $ = s => document.querySelector(s), LS = localStorage, CHUNK = 900000, PFX = 'Backup_Laporan_';
 const HAS_DIR = 'showDirectoryPicker' in window, HAS_GZ = typeof CompressionStream !== 'undefined';
 const fmtT = t => t ? new Date(t).toLocaleString('id-ID', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '-';
@@ -239,17 +241,17 @@ async function upload() {
   }
   await sb('laporan_sync', { method: 'POST', headers: { Prefer: 'return=minimal' }, body: JSON.stringify([{ ns, ver, part: -1, data: JSON.stringify({ n, at: ver }) }]) });
   await sb(`laporan_sync?ns=eq.${ns}&ver=lt.${encodeURIComponent(ver)}`, { method: 'DELETE' }).catch(() => {});
-  LS.setItem('syncLast', ver); msg('✅ Upload ke cloud berhasil.\n' + sum(o));
+  LS.setItem('syncLast', ver); LS.setItem('syncHash', await hashOf(o)); autoPaused = false; msg('✅ Upload ke cloud berhasil.\n' + sum(o));
 }
-async function download() {
+async function download(silent) {
   const code = getCode(), m = await cloudMeta(code);
   if (!m) throw new Error('Belum ada data di cloud untuk Kode Sinkron ini.');
   msg('Mengambil data dari cloud...');
   const rows = await sb(`laporan_sync?select=part,data&ns=eq.${await nsOf(code)}&ver=eq.${encodeURIComponent(m.ver)}&part=gte.0&order=part`);
   if (!rows || rows.length !== m.n) throw new Error('Data cloud belum lengkap, coba lagi.');
   const o = await unpack(await unseal(await unb64(rows.map(r => r.data).join('')), code));
-  if (!confirm(`Ambil data dari cloud (${fmtT(m.ver)})?\n\n${sum(o)}\n\nData di device ini akan DITIMPA.`)) return msg('Dibatalkan.');
-  await apply(o); LS.setItem('syncLast', m.ver); msg('✅ Selesai. Memuat ulang...'); setTimeout(() => location.reload(), 700);
+  if (!silent && !confirm(`Ambil data dari cloud (${fmtT(m.ver)})?\n\n${sum(o)}\n\nData di device ini akan DITIMPA.`)) return msg('Dibatalkan.');
+  await apply(o); LS.setItem('syncLast', m.ver); LS.setItem('syncHash', await hashOf(await snap())); msg('✅ Selesai. Memuat ulang...'); setTimeout(() => location.reload(), 700);
 }
 
 /* ---------- aksi backup ---------- */
@@ -287,8 +289,106 @@ const A = {
   async code() { const c = getCode(true); msg('Kode Sinkron disimpan.'); }
 };
 
+
+/* ---------- SINKRON OTOMATIS ---------- */
+/* Aturan aman: kirim ke cloud hanya jika cloud TIDAK lebih baru; ambil dari cloud hanya jika device TIDAK punya
+   perubahan yang belum terkirim; jika keduanya berubah -> tanya pengguna. Perubahan dideteksi dengan sidik jari (hash)
+   data, sehingga event palsu saat aplikasi dibuka tidak memicu upload. */
+const autoOn = () => LS.getItem('autoSync') !== '0';
+let syncing = false, autoPaused = false, pendingChg = false, chgTimer = null, pillT = null, lastCheck = 0;
+const hhmm = () => new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+async function hashOf(o) {
+  const c = { ...o }; delete c.at;
+  const d = new Uint8Array(await crypto.subtle.digest('SHA-256', utf8(enc(c))));
+  return [...d].slice(0, 16).map(x => x.toString(16).padStart(2, '0')).join('');
+}
+function decide(m, ll, dirty, empty, load) {
+  if (!m) return dirty && !empty ? 'up' : 'cloud-empty';
+  const newer = ll ? (Date.parse(m.ver) - Date.parse(ll) > 1000) : true;
+  if (newer && !dirty) return load ? 'down' : 'notice';
+  if (newer && dirty) return load ? 'conflict' : 'warn';
+  return dirty ? 'up' : 'ok';
+}
+function pill(t, kind) {
+  let p = document.getElementById('syPill');
+  if (!p) {
+    p = document.createElement('div'); p.id = 'syPill'; p.title = 'Klik untuk buka Backup / Sync';
+    document.body.appendChild(p);
+    p.addEventListener('click', () => { $('#bkOv').classList.add('show'); $('#bkMsg').style.display = 'none'; status(); });
+  }
+  const bg = { ok: '#047857', busy: '#1f4e8c', warn: '#b45309', err: '#b91c1c' }[kind] || '#1f4e8c';
+  p.style.cssText = 'position:fixed;right:10px;bottom:10px;z-index:9000;padding:5px 11px;border-radius:14px;font:600 .72rem Segoe UI,Arial,sans-serif;color:#fff;cursor:pointer;box-shadow:0 2px 10px rgba(0,0,0,.35);max-width:80vw;background:' + bg + ';opacity:1;transition:opacity .6s';
+  p.textContent = t; clearTimeout(pillT);
+  if (kind === 'ok') pillT = setTimeout(() => { p.style.opacity = '.45'; }, 4000);
+}
+function refreshAutoUI() {
+  const b = $('#bkAuto');
+  if (b) b.textContent = autoOn() ? '🔄 Sinkron otomatis: AKTIF (klik untuk matikan)' : '⏸ Sinkron otomatis: MATI (klik untuk aktifkan)';
+}
+async function autoUp() {
+  pill('⏳ Mengirim data ke cloud...', 'busy'); QUIET = true;
+  try { await upload(); } finally { QUIET = false; }
+  pill('✅ Tersinkron ' + hhmm(), 'ok');
+}
+async function autoDown() {
+  pill('⏳ Mengambil data terbaru dari cloud...', 'busy'); QUIET = true;
+  try { await download(true); } finally { QUIET = false; }
+}
+async function runSync(trigger) {
+  if (syncing || !autoOn()) return;
+  if (!LS.getItem('syncCode')) { if (trigger === 'start') pill('☁️ Isi Kode Sinkron (Backup/Sync → Upload) untuk sinkron otomatis', 'warn'); return; }
+  const load = trigger === 'start' || trigger === 'visible';
+  syncing = true; lastCheck = Date.now();
+  try {
+    pill('⏳ Mengecek sinkron...', 'busy');
+    const code = LS.getItem('syncCode'), m = await cloudMeta(code);
+    const o = await snap(), h = await hashOf(o), lh = LS.getItem('syncHash'), ll = LS.getItem('syncLast'), empty = isEmpty(o);
+    const dirty = lh ? h !== lh : !empty;
+    let act = decide(m, ll, dirty, empty, load);
+    if (act === 'conflict' && autoPaused) act = 'warn';
+    if (act === 'up') await autoUp();
+    else if (act === 'down') await autoDown();
+    else if (act === 'conflict') {
+      if (confirm('Data di cloud lebih baru (' + fmtT(m.ver) + '), tetapi device ini juga punya perubahan yang belum terkirim.\n\nOK = Ambil data cloud (data device ini DITIMPA)\nBatal = pilihan lain')) await autoDown();
+      else if (confirm('Timpa data CLOUD dengan data device ini?\n\nOK = Upload (data cloud DITIMPA)\nBatal = jangan lakukan apa-apa (sinkron otomatis dijeda sampai halaman dimuat ulang)')) await autoUp();
+      else { autoPaused = true; pill('⏸ Sinkron otomatis dijeda (ada konflik)', 'warn'); }
+    }
+    else if (act === 'warn') { autoPaused = true; pill('⚠️ Konflik: cloud & device sama-sama berubah. Buka Backup/Sync', 'warn'); }
+    else if (act === 'notice') pill('⚠️ Ada data baru di cloud. Buka Backup/Sync → Ambil', 'warn');
+    else if (act === 'cloud-empty') pill('☁️ Cloud masih kosong. Upload dulu dari device utama', 'warn');
+    else pill('✅ Tersinkron ' + hhmm(), 'ok');
+  } catch (e) {
+    const t = String((e && e.message) || e);
+    if (t === 'TABEL_BELUM_ADA') pill('⚠️ Tabel Supabase belum dibuat', 'err');
+    else if (e instanceof TypeError || /fetch|network/i.test(t)) pill('📴 Offline, sinkron ditunda', 'warn');
+    else pill('⚠️ Sinkron gagal: ' + t.slice(0, 80), 'err');
+  } finally {
+    syncing = false;
+    if (pendingChg) { pendingChg = false; onChange(); }
+  }
+}
+function onChange() {
+  if (!autoOn() || !LS.getItem('syncCode')) return;
+  if (syncing) { pendingChg = true; return; }
+  clearTimeout(chgTimer); chgTimer = setTimeout(() => { chgTimer = null; runSync('change'); }, 20000);
+}
+A.auto = async function () {
+  const on = !autoOn();
+  LS.setItem('autoSync', on ? '1' : '0'); refreshAutoUI();
+  if (on) { if (!LS.getItem('syncCode')) getCode(true); msg('✅ Sinkron otomatis AKTIF'); runSync('start'); }
+  else { msg('Sinkron otomatis dimatikan.'); const p = document.getElementById('syPill'); if (p) p.remove(); }
+};
+try { ['laporan-data', 'ar-piutang-sync'].forEach(n => { new BroadcastChannel(n).onmessage = onChange; }); } catch (e) {}
+window.addEventListener('storage', e => { if (['arcekMarks', 'cekOverrides', 'penjBatal'].includes(e.key)) onChange(); });
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'hidden') { if (chgTimer) { clearTimeout(chgTimer); chgTimer = null; runSync('change'); } }
+  else if (Date.now() - lastCheck > 60000) runSync('visible');
+});
+setTimeout(() => runSync('start'), 2500);
+
 /* ---------- UI ---------- */
 function msg(t, err) {
+  if (QUIET && !err) return;
   const m = $('#bkMsg'); m.textContent = t; m.className = err ? 'err' : ''; m.style.display = 'block'; m.style.whiteSpace = 'pre-line';
   const ok = /^✅/.test(t), busy = /\.\.\.$/.test(t);
   let b = document.getElementById('bkToast');
@@ -298,6 +398,7 @@ function msg(t, err) {
   clearTimeout(b._t); b._t = setTimeout(() => b.remove(), err ? 7000 : busy ? 60000 : 5000);
 }
 async function status() {
+  refreshAutoUI();
   const h = HAS_DIR ? await getH().catch(() => null) : null;
   $('#bkStat').textContent = (LS.getItem('bkLast') ? 'Backup terakhir: ' + fmtT(LS.getItem('bkLast')) : 'Belum pernah backup.') + ' • ' + (!HAS_DIR ? 'Browser ini tidak bisa pilih folder (pakai Unduh/Restore File).' : h ? 'Folder: ' + h.name : 'Folder Google Drive belum dipilih.');
   document.querySelectorAll('[data-dir]').forEach(b => b.disabled = !HAS_DIR);
