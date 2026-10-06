@@ -52,6 +52,26 @@
   #bkMsg{margin-top:8px;padding:7px 9px;border-radius:7px;background:rgba(37,99,235,.12);display:none;word-break:break-word}
   #bkMsg.err{background:rgba(220,38,38,.14);color:#dc2626}
   .bk-lnk{background:none;border:0;color:var(--pr);text-decoration:underline;cursor:pointer;font-size:.72rem;padding:0}
+  /* ===== MENU pojok kanan atas ===== */
+  .mn-wrap{position:relative;align-self:center;margin-bottom:3px;margin-left:6px}
+  .mn-btn{background:rgba(255,255,255,.15);color:#fff;border:none;padding:3px 12px;font-size:.78rem;font-weight:600;border-radius:5px;cursor:pointer;display:inline-flex;align-items:center;gap:6px}
+  .mn-btn:hover,.mn-btn.on{background:rgba(255,255,255,.3)}
+  .mn-dd{--bg:#fff;--tx:#1e293b;--bd:#d6dde8;--hv:#eef3fb;display:none;position:absolute;top:calc(100% + 6px);right:0;min-width:230px;background:var(--bg);color:var(--tx);border:1px solid var(--bd);border-radius:10px;box-shadow:0 12px 32px rgba(0,0,0,.35);padding:5px;z-index:9500}
+  :root[data-theme=dark] .mn-dd{--bg:#161b22;--tx:#e6edf3;--bd:#30363d;--hv:#21262d}
+  .mn-dd.show{display:block}
+  .mn-item{display:flex;align-items:center;gap:8px;width:100%;text-align:left;padding:9px 12px;border:0;border-radius:7px;background:transparent;color:var(--tx);font:600 .8rem 'Segoe UI',Arial,sans-serif;cursor:pointer;white-space:nowrap}
+  .mn-item:hover{background:var(--hv)}
+  .mn-sep{height:1px;background:var(--bd);margin:4px 6px}
+  /* ===== MODAL RUBAH HARGA BELI ===== */
+  .hb-l{display:block;font-size:.72rem;color:var(--mu);margin:8px 0 2px}
+  .hb-i{width:100%;padding:8px 10px;border:1px solid var(--bd);border-radius:7px;background:transparent;color:var(--tx);font:inherit;font-size:.8rem;outline:none}
+  .hb-i:focus{border-color:var(--pr)}
+  :root[data-theme=dark] .hb-i{color-scheme:dark}
+  :root[data-theme=dark] .hb-i option{background:#161b22;color:#e6edf3}
+  .hb-d{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .hb-t{display:flex;align-items:center;gap:6px;color:var(--pr)}
+  :root[data-theme=dark] .hb-t{color:#58a6ff}
+  .hb-go{margin-top:12px;text-align:center}
 </style>
 </head>
 <body>
@@ -61,8 +81,15 @@
   <button class="main-tab" data-tab="cek">✅ Cek</button>
   <button class="main-tab" data-tab="ar">📋 AR</button>
   <button class="main-tab" data-tab="arcek">🔎 AR-CEK</button>
-  <button class="bk-open" id="bkOpen" title="Backup, Restore & Sync antar-device">☁️ Backup / Sync</button>
   <button class="theme-btn" id="themeBtn" title="Ganti mode gelap / terang (semua tab)">☀️ Terang</button>
+  <div class="mn-wrap">
+    <button class="mn-btn" id="mnBtn" title="Menu">☰ Menu</button>
+    <div class="mn-dd" id="mnDd">
+      <button class="mn-item" id="bkOpen" title="Backup, Restore & Sync antar-device">☁️ Backup / Sync</button>
+      <div class="mn-sep"></div>
+      <button class="mn-item" id="hbOpen" title="Ubah harga beli massal">✏️ Rubah Harga Beli</button>
+    </div>
+  </div>
 </div>
 <div class="frames">
   <iframe id="frame-penjualan" title="Penjualan"></iframe>
@@ -115,6 +142,108 @@ applyThemeAll(currentTheme());
 if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1')) {
   window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
 }
+</script>
+<div class="bk-ov" id="hbOv"><div class="bk-box">
+<h3 class="hb-t">✏️ MENU RUBAH HARGA BELI <button type="button" id="hbX" title="Tutup">✕</button></h3>
+<div class="mu">Fitur ini untuk edit massal. Pilih rentang tanggal (boleh satu hari saja, atau satu bulan penuh) + produk, lalu isi harga beli baru.</div>
+<div class="hb-d">
+  <div><label class="hb-l" for="hbStart">Tanggal mulai</label><input class="hb-i" type="date" id="hbStart"></div>
+  <div><label class="hb-l" for="hbEnd">Tanggal akhir</label><input class="hb-i" type="date" id="hbEnd"></div>
+</div>
+<label class="hb-l" for="hbProd">Produk</label>
+<select class="hb-i" id="hbProd"><option value="">Pilih produk...</option></select>
+<label class="hb-l" for="hbPrice">Harga beli baru</label>
+<input class="hb-i" type="text" inputmode="decimal" id="hbPrice" placeholder="Masukkan harga beli baru" autocomplete="off">
+<button type="button" class="bk-b p hb-go" id="hbGo">Ubah Harga Beli Produk</button>
+<div class="mu" id="hbInfo">Pilih rentang tanggal + produk, isi harga beli baru.</div>
+</div></div>
+<script>
+(() => {
+const $ = s => document.querySelector(s);
+const NF = new Intl.NumberFormat('id-ID', { maximumFractionDigits: 2 });
+
+/* ----- dropdown MENU ----- */
+const dd = $('#mnDd'), mb = $('#mnBtn');
+const closeMenu = () => { dd.classList.remove('show'); mb.classList.remove('on'); };
+mb.addEventListener('click', e => { e.stopPropagation(); mb.classList.toggle('on', dd.classList.toggle('show')); });
+dd.addEventListener('click', closeMenu);                       /* klik item -> menu menutup */
+document.addEventListener('click', e => { if (!e.target.closest('.mn-wrap')) closeMenu(); });
+window.addEventListener('blur', closeMenu);                    /* klik di dalam iframe */
+
+/* ----- akses data Penjualan (di iframe) ----- */
+const PW = () => $('#frame-penjualan').contentWindow;
+function getRows() {
+  try { const r = PW().eval('typeof rawData!=="undefined"?rawData:null'); return Array.isArray(r) ? r : null; }
+  catch (e) { return null; }
+}
+const info = (t, err) => { const el = $('#hbInfo'); el.textContent = t; el.style.color = err ? '#dc2626' : ''; };
+function range() {
+  let a = $('#hbStart').value, b = $('#hbEnd').value;
+  if (!a && !b) return null;
+  if (!a) a = b; if (!b) b = a;            /* isi satu tanggal saja = satu hari */
+  return a <= b ? [a, b] : [b, a];
+}
+function inRange(rows, lo, hi) { return rows.filter(r => r.YMD && r.YMD >= lo && r.YMD <= hi); }
+
+function refreshProducts() {
+  const sel = $('#hbProd'), keep = sel.value, rows = getRows(), rg = range();
+  sel.innerHTML = '<option value="">Pilih produk...</option>';
+  if (!rows || !rows.length) { info('Belum ada data Penjualan. Upload dulu di tab Penjualan.', true); return; }
+  if (!rg) { info('Pilih rentang tanggal + produk, isi harga beli baru.'); return; }
+  const cnt = new Map();
+  for (const r of inRange(rows, rg[0], rg[1])) cnt.set(r.Produk, (cnt.get(r.Produk) || 0) + 1);
+  [...cnt.keys()].sort((a, b) => a.localeCompare(b, 'id')).forEach(p => {
+    const o = document.createElement('option'); o.value = p; o.textContent = p + ' (' + cnt.get(p) + ' baris)'; sel.appendChild(o);
+  });
+  if (keep && cnt.has(keep)) sel.value = keep;
+  if (!cnt.size) info('Tidak ada transaksi pada rentang tanggal tersebut.', true); else refreshInfo();
+}
+function refreshInfo() {
+  const rows = getRows(), rg = range(), prod = $('#hbProd').value;
+  if (!rows || !rg || !prod) { if (rows && rg) info('Pilih produk, lalu isi harga beli baru.'); return; }
+  const t = inRange(rows, rg[0], rg[1]).filter(r => r.Produk === prod);
+  const hb = t.map(r => Number(r['Harga Beli']) || 0), lo = Math.min(...hb), hi = Math.max(...hb);
+  info(t.length + ' baris akan diubah. Harga beli sekarang: Rp ' + NF.format(lo) + (lo === hi ? '' : ' – Rp ' + NF.format(hi)) + '.');
+}
+
+/* ----- buka / tutup ----- */
+function openHb() {
+  $('#hbOv').classList.add('show');
+  $('#hbPrice').value = ''; $('#hbProd').value = '';
+  refreshProducts();
+}
+function closeHb() { $('#hbOv').classList.remove('show'); }
+$('#hbOpen').addEventListener('click', openHb);
+$('#hbX').addEventListener('click', closeHb);
+$('#hbOv').addEventListener('click', e => { if (e.target.id === 'hbOv') closeHb(); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeHb(); });
+['hbStart', 'hbEnd'].forEach(id => $('#' + id).addEventListener('change', refreshProducts));
+$('#hbProd').addEventListener('change', refreshInfo);
+
+/* ----- eksekusi ----- */
+$('#hbGo').addEventListener('click', () => {
+  const rows = getRows(), rg = range(), prod = $('#hbProd').value, w = PW();
+  if (!rows || !rows.length) return info('Belum ada data Penjualan.', true);
+  if (!rg) return info('Isi tanggal mulai / tanggal akhir dulu.', true);
+  if (!prod) return info('Pilih produk dulu.', true);
+  const raw = $('#hbPrice').value.trim();
+  const price = raw ? w.toNum(raw) : NaN;                       /* parser angka yang sama dengan upload Excel */
+  if (!isFinite(price) || price <= 0) return info('Harga beli baru harus berupa angka lebih dari 0.', true);
+  const target = inRange(rows, rg[0], rg[1]).filter(r => r.Produk === prod);
+  if (!target.length) return info('Tidak ada baris yang cocok.', true);
+  const lbl = rg[0] === rg[1] ? rg[0] : rg[0] + ' s/d ' + rg[1];
+  if (!confirm('Ubah harga beli "' + prod + '" menjadi Rp ' + NF.format(price) + '?\n\nTanggal: ' + lbl + '\nJumlah baris: ' + target.length + '\n\nHPP & profit baris tersebut ikut dihitung ulang. Tindakan ini tidak bisa dibatalkan.')) return;
+  for (const r of target) {
+    r['Harga Beli'] = price;
+    r.HPP = price * (Number(r.Jumlah) || 0);
+    r.Profit = (Number(r.Total) || 0) - r.HPP;
+  }
+  try { w.applyFilters(); w.saveToIDB(); } catch (e) { return info('Gagal menyimpan: ' + e.message, true); }
+  info('✅ ' + target.length + ' baris "' + prod + '" diubah ke Rp ' + NF.format(price) + '.');
+  $('#hbPrice').value = '';
+  refreshProducts();
+});
+})();
 </script>
 <div class="bk-ov" id="bkOv"><div class="bk-box">
 <h3>💾 Backup &amp; Restore Semua Data <button data-a="close" title="Tutup">✕</button></h3>
