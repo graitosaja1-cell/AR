@@ -1,0 +1,1538 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<title>Rekap Uang Masuk Harian</title>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<style>
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    font-family: -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+    margin: 0; background: #f5f6fa; color: #222;
+    display: flex; flex-direction: column; overflow: hidden;
+  }
+
+  /* ===== HEADER ===== */
+  header {
+    background: #1f3b73; color: #fff;
+    padding: 4px 14px;
+    display: flex; align-items: center;
+    position: relative; z-index: 20;
+    min-height: 26px; flex-shrink: 0;
+  }
+  header .title h1 {
+    margin: 0;
+    font-size: 12px;
+    font-weight: 400;
+    letter-spacing: .2px;
+  }
+
+  /* ===== MENU WRAP (kebab + dropdown) ===== */
+  .menu-wrap { position: relative; display: inline-block; }
+  .menu-btn {
+    background: rgba(31,59,115,.08);
+    border: 1px solid #d8deea;
+    color: #1f3b73;
+    width: 22px; height: 22px; border-radius: 4px;
+    font-size: 14px; line-height: 1; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: background .15s;
+  }
+  .menu-btn:hover { background: #eef1f7; }
+
+  .menu-dropdown {
+    position: absolute; top: calc(100% + 6px); right: 0;
+    background: #fff; color: #222;
+    border: 1px solid #d8deea; border-radius: 8px;
+    box-shadow: 0 8px 24px rgba(0,0,0,.18);
+    min-width: 340px; padding: 10px 0;
+    display: none; z-index: 999;
+  }
+  .menu-dropdown.open { display: block; }
+  .menu-dropdown .item { padding: 8px 16px; font-size: 13px; display: flex; flex-direction: column; gap: 4px; }
+  .menu-dropdown .item label { font-weight: 600; color: #1f3b73; font-size: 12px; }
+  .menu-dropdown .item input[type=file] {
+    width: 100%; font-size: 13px; padding: 5px 6px;
+    border: 1px solid #ccd; border-radius: 4px; background: #fff;
+  }
+  .menu-dropdown .divider { height: 1px; background: #e0e0e0; margin: 6px 0; }
+  .menu-dropdown .actions { display: flex; gap: 8px; padding: 6px 16px; }
+  .menu-dropdown .btn {
+    flex: 1; padding: 7px 10px; font-size: 13px; border: none; border-radius: 4px; cursor: pointer;
+  }
+  .menu-dropdown .btn.primary { background: #1f3b73; color: #fff; }
+  .menu-dropdown .btn.primary:disabled { background: #aab; cursor: not-allowed; }
+  .menu-dropdown .btn.primary:not(:disabled):hover { background: #16305e; }
+  .menu-dropdown .btn.ghost { background: #eef1f7; color: #1f3b73; border: 1px solid #d8deea; }
+  .menu-dropdown .menu-item {
+    display: flex; align-items: center; gap: 8px;
+    padding: 8px 16px; font-size: 13px; cursor: pointer;
+    color: #222; transition: background .12s;
+  }
+  .menu-dropdown .menu-item:hover { background: #eef1f7; color: #1f3b73; }
+  .menu-dropdown .menu-item.danger { color: #b91c1c; }
+  .menu-dropdown .menu-item.danger:hover { background: #fdecec; color: #7f1d1d; }
+
+  /* ===== CARDS ===== */
+  .cards {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 10px;
+    padding: 12px 24px 0;
+    background: #fff;
+    flex-shrink: 0;
+  }
+  .card {
+    background: #fff;
+    border: 1px solid #e0e4ee;
+    border-left: 3px solid #1f3b73;
+    border-radius: 6px;
+    padding: 8px 12px;
+    display: flex; flex-direction: column; gap: 2px;
+    min-width: 0;
+  }
+  .card .label {
+    font-size: 11px; color: #667; text-transform: uppercase;
+    letter-spacing: .4px; font-weight: 600;
+  }
+  .card .value {
+    font-size: 14px; font-weight: 700; color: #1f3b73;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .card .sub { font-size: 11px; color: #889; }
+  .card.c-minyak    { border-left-color: #2e7d32; }
+  .card.c-minyak    .value { color: #2e7d32; }
+  .card.c-rupa      { border-left-color: #ef6c00; }
+  .card.c-rupa      .value { color: #ef6c00; }
+  .card.c-grand     { border-left-color: #c62828; background: #fff8f8; }
+  .card.c-grand     .value { color: #c62828; font-size: 15px; }
+
+  /* ===== TABS BAR ===== */
+  .tabs-bar {
+    display: flex;
+    align-items: center;
+    position: relative; z-index: 10;
+    background: #fff;
+    border-bottom: 1px solid #e0e0e0;
+    flex-shrink: 0;
+    gap: 8px;
+    padding-right: 12px;
+  }
+  .tabs {
+    display: flex;
+    padding: 0 12px;
+    overflow-x: auto;
+    white-space: nowrap;
+    flex: 1 1 auto;
+    min-width: 0;
+    scrollbar-width: thin;
+  }
+  .tab {
+    display: inline-block;
+    padding: 8px 14px;
+    font-size: .82rem;
+    font-weight: 600;
+    color: #667;
+    cursor: pointer;
+    border-bottom: 3px solid transparent;
+    user-select: none;
+    transition: color .15s, border-color .15s;
+    background: transparent;
+    border-top: none;
+    border-left: none;
+    border-right: none;
+    flex-shrink: 0;
+  }
+  .tab:hover { color: #1f3b73; }
+  .tab.active {
+    color: #1f3b73;
+    border-bottom-color: #1f3b73;
+  }
+
+  /* ===== FILTER INLINE ===== */
+  .filter-inline {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-shrink: 0;
+  }
+  .filter-inline .fg { display: flex; flex-direction: column; gap: 1px; }
+  .filter-inline label {
+    font-size: 9px; font-weight: 700; color: #889;
+    text-transform: uppercase; letter-spacing: .3px;
+    line-height: 1;
+  }
+  .filter-inline input[type="text"],
+  .filter-inline select {
+    padding: 2px 6px; font-size: 11px;
+    border: 1px solid #d8deea; border-radius: 3px;
+    background: #fff; color: #222;
+    height: 22px; line-height: 1; outline: none;
+    transition: border-color .15s;
+  }
+  .filter-inline input[type="text"]:focus,
+  .filter-inline select:focus { border-color: #1f3b73; }
+  .filter-inline .search-input { width: 150px; }
+  .filter-inline select { width: 90px; cursor: pointer; }
+  .filter-inline .btn-reset {
+    height: 22px; padding: 2px 10px; font-size: 11px; font-weight: 600;
+    background: #eef1f7; color: #1f3b73; border: 1px solid #d8deea;
+    border-radius: 3px; cursor: pointer; transition: background .12s;
+    align-self: flex-end;
+  }
+  .filter-inline .btn-reset:hover { background: #dde5f3; }
+  .filter-inline .menu-wrap { align-self: flex-end; }
+
+  /* ===== PANELS WRAPPER ===== */
+  #panels { flex: 1; min-height: 0; display: flex; }
+  .panel { display: none; padding: 0; }
+  .panel.active {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+  }
+
+  /* ===== TABLE WRAP (container) ===== */
+  .table-wrap {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    border-top: 1px solid #e0e0e0;
+    overflow: hidden;
+    background: #fff;
+  }
+  .empty {
+    padding: 32px;
+    text-align: center;
+    color: #888;
+    font-size: 13px;
+  }
+
+  /* ===== VIRTUAL TABLE ===== */
+  .vt-outer {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    background: #fff;
+  }
+  .vt-wrap {
+    flex: 1;
+    min-height: 0;
+    overflow: auto;
+    background: #fff;
+    position: relative;
+  }
+  .vt-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: #fff;
+    font-size: 12px;
+  }
+  .vt-table thead th {
+    background: #1f3b73;
+    color: #fff;
+    font-weight: 700;
+    font-size: 11px;
+    letter-spacing: 0.4px;
+    text-transform: uppercase;
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    padding: 7px 10px;
+    text-align: left;
+    white-space: nowrap;
+    border: 1px solid #16305e;
+  }
+  .vt-table thead th.num { text-align: right; }
+  .vt-table tbody td {
+    border: 1px solid #e0e0e0;
+    padding: 7px 10px;
+    text-align: left;
+    white-space: nowrap;
+    height: 30px;
+    box-sizing: border-box;
+    vertical-align: middle;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 340px;
+  }
+  .vt-table tbody td.num { text-align: right; }
+  .vt-table tbody tr:nth-child(even) td { background: #fafbfe; }
+  .vt-table tbody tr:hover td { background: #f0f4fa; }
+  .vt-table tbody tr.vt-spacer td {
+    padding: 0 !important;
+    border: 0 !important;
+    line-height: 0;
+    background: transparent !important;
+  }
+  .vt-table tfoot tr td {
+    position: sticky;
+    bottom: 0;
+    background: #e8eef8;
+    font-weight: 700;
+    border: 1px solid #e0e0e0;
+    border-top: 2px solid #1f3b73;
+    padding: 7px 10px;
+    z-index: 3;
+    white-space: nowrap;
+  }
+  .vt-table tfoot tr td.num { text-align: right; }
+
+  /* ===== TOAST ===== */
+  .toast {
+    position: fixed; bottom: 24px; left: 50%;
+    transform: translateX(-50%) translateY(20px);
+    background: #1f3b73; color: #fff;
+    padding: 10px 20px; border-radius: 8px;
+    font-size: .82rem; font-weight: 600;
+    box-shadow: 0 4px 16px rgba(0,0,0,.25);
+    z-index: 9999; opacity: 0; pointer-events: none;
+    transition: opacity .25s, transform .25s;
+    max-width: 90vw; text-align: center;
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  /* ===== LOADING ===== */
+  .loading {
+    position: fixed; inset: 0; background: rgba(255,255,255,.85);
+    display: none; align-items: center; justify-content: center;
+    flex-direction: column; gap: 10px; z-index: 9998;
+  }
+  .loading.show { display: flex; }
+  .loading .spinner {
+    width: 40px; height: 40px; border: 4px solid #d8deea;
+    border-top-color: #1f3b73; border-radius: 50%;
+    animation: spin .7s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .loading p { font-size: 13px; color: #1f3b73; font-weight: 600; }
+
+  /* ===== MODAL HAPUS ===== */
+  .modal-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,.45);
+    display: none; align-items: center; justify-content: center;
+    z-index: 10000; padding: 20px;
+  }
+  .modal-overlay.show { display: flex; }
+  .modal {
+    background: #fff; border-radius: 10px;
+    min-width: 400px; max-width: 92vw; max-height: 85vh;
+    display: flex; flex-direction: column;
+    box-shadow: 0 12px 40px rgba(0,0,0,.3);
+    animation: modalIn .15s ease-out;
+  }
+  @keyframes modalIn {
+    from { opacity: 0; transform: translateY(-8px) scale(.98); }
+    to   { opacity: 1; transform: translateY(0) scale(1); }
+  }
+  .modal-header {
+    padding: 14px 18px; border-bottom: 1px solid #e0e0e0;
+    font-size: 14px; font-weight: 700; color: #1f3b73;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .modal-header .close-x {
+    background: none; border: none; cursor: pointer;
+    font-size: 20px; color: #889; line-height: 1; padding: 0;
+  }
+  .modal-header .close-x:hover { color: #222; }
+  .modal-body { padding: 14px 18px; overflow-y: auto; }
+  .modal-body p.hint { margin: 0 0 12px; font-size: 12px; color: #667; }
+  .modal-body .select-all-row {
+    display: flex; align-items: center; gap: 8px;
+    padding: 6px 12px; margin-bottom: 6px;
+    border-bottom: 1px dashed #e0e0e0;
+    font-size: 12px; color: #1f3b73; font-weight: 600;
+    cursor: pointer;
+  }
+  .modal-body .select-all-row input { cursor: pointer; }
+  .modal-footer {
+    padding: 12px 18px; border-top: 1px solid #e0e0e0;
+    display: flex; gap: 8px; justify-content: flex-end;
+  }
+  .modal-footer .btn {
+    padding: 8px 16px; font-size: 13px; border-radius: 4px; cursor: pointer;
+    border: 1px solid #d8deea; background: #eef1f7; color: #1f3b73; font-weight: 600;
+  }
+  .modal-footer .btn:hover { background: #dde5f3; }
+  .modal-footer .btn.danger { background: #dc2626; color: #fff; border-color: #dc2626; }
+  .modal-footer .btn.danger:hover { background: #b91c1c; border-color: #b91c1c; }
+  .modal-footer .btn.danger:disabled {
+    background: #fca5a5; border-color: #fca5a5; cursor: not-allowed;
+  }
+
+  .month-list { display: flex; flex-direction: column; gap: 4px; }
+  .month-item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 8px 12px; border-radius: 5px; cursor: pointer;
+    border: 1px solid #e0e4ee; transition: background .12s;
+    font-size: 13px;
+  }
+  .month-item:hover { background: #eef1f7; }
+  .month-item.checked { background: #e8eef8; border-color: #1f3b73; }
+  .month-item input[type=checkbox] { cursor: pointer; width: 15px; height: 15px; }
+  .month-item .lbl { flex: 1; color: #222; font-weight: 500; }
+  .month-item .cnt {
+    font-size: 11px; color: #556; background: #f0f2f5;
+    padding: 2px 8px; border-radius: 10px; font-weight: 600;
+  }
+
+  @media (max-width: 1100px) {
+    .filter-inline .search-input { width: 120px; }
+    .filter-inline select { width: 80px; }
+  }
+  @media (max-width: 720px) {
+    .cards { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .modal { min-width: 90vw; }
+    .filter-inline .search-input { width: 100px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="loading" id="loadingOverlay">
+  <div class="spinner"></div>
+  <p id="loadingText">Memuat data tersimpan...</p>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<!-- ===== MODAL HAPUS PER BULAN ===== -->
+<div class="modal-overlay" id="deleteModal">
+  <div class="modal">
+    <div class="modal-header">
+      🗑️ Hapus Data per Bulan
+      <button class="close-x" onclick="closeDeleteModal()" title="Tutup">×</button>
+    </div>
+    <div class="modal-body">
+      <p class="hint">Centang bulan yang datanya ingin dihapus. Data bulan lain akan tetap tersimpan.</p>
+      <label class="select-all-row">
+        <input type="checkbox" id="selectAllMonths" onchange="toggleSelectAllMonths(this.checked)">
+        <span>Pilih Semua</span>
+      </label>
+      <div class="month-list" id="deleteMonthList"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeDeleteModal()">Batal</button>
+      <button class="btn danger" id="btnConfirmDelete" disabled onclick="confirmDeleteMonths()">Hapus Terpilih</button>
+    </div>
+  </div>
+</div>
+
+<header>
+  <div class="title">
+    <h1>Laporan Uang Masuk</h1>
+  </div>
+</header>
+
+<!-- ===== CARDS RINGKASAN ===== -->
+<div class="cards" id="cards">
+  <div class="card">
+    <div class="label">Total Faktur</div>
+    <div class="value" id="cardFaktur">Rp 0</div>
+    <div class="sub" id="cardFakturSub">0 transaksi</div>
+  </div>
+  <div class="card c-minyak">
+    <div class="label">Total Minyak</div>
+    <div class="value" id="cardMinyak">Rp 0</div>
+    <div class="sub" id="cardMinyakSub">Cash: 0 • TF: 0</div>
+  </div>
+  <div class="card c-rupa">
+    <div class="label">Total Rupa-Rupa</div>
+    <div class="value" id="cardRupa">Rp 0</div>
+    <div class="sub" id="cardRupaSub">Cash: 0 • TF: 0</div>
+  </div>
+  <div class="card c-grand">
+    <div class="label">Grand Total</div>
+    <div class="value" id="cardGrand">Rp 0</div>
+    <div class="sub" id="cardGrandSub">Cash: 0 • TF: 0</div>
+  </div>
+</div>
+
+<!-- ===== TABS BAR: TABS + FILTER ===== -->
+<div class="tabs-bar">
+  <div class="tabs" id="tabs"></div>
+
+  <div class="filter-inline">
+    <div class="fg">
+      <label>🔍 Cari cepat</label>
+      <input type="text" class="search-input" id="fSearch" placeholder="Toko / Faktur / Sales / Alamat...">
+    </div>
+    <div class="fg">
+      <label>Bulan</label>
+      <select id="filterBulan"><option value="">Semua</option></select>
+    </div>
+    <div class="fg">
+      <label>Tanggal</label>
+      <select id="filterTanggal"><option value="">Semua</option></select>
+    </div>
+    <div class="fg">
+      <label>Sales</label>
+      <select id="filterSales"><option value="">Semua</option></select>
+    </div>
+    <button class="btn-reset" id="btnResetBar">Reset</button>
+
+    <div class="menu-wrap">
+      <button class="menu-btn" id="menuBtn" title="Menu">&#8942;</button>
+
+      <div class="menu-dropdown" id="menuDropdown">
+        <div class="item">
+          <label>File Excel</label>
+          <input type="file" id="fileInput" accept=".xlsx,.xls">
+        </div>
+
+        <div class="divider"></div>
+
+        <div class="menu-item" id="menuNewUpload">↻ &nbsp;Upload Baru</div>
+        <div class="menu-item danger" id="menuDeleteMonth">🗑️ &nbsp;Hapus Data per Bulan</div>
+
+        <div class="divider"></div>
+
+        <div class="actions">
+          <button class="btn ghost" id="btnResetMenu">Reset Semua Filter</button>
+        </div>
+        <div class="actions">
+          <button class="btn primary" id="btnExportAll" disabled title="Export semua 6 sheet (data + styling)">📊 Semua (Rapi)</button>
+          <button class="btn primary" id="btnExportCurrent" disabled title="Export hanya tab yang sedang aktif (data + styling)">📄 Tab Aktif (Rapi)</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="panels"></div>
+
+<script>
+const BULAN_NAMA = ["Januari","Februari","Maret","April","Mei","Juni","Juli","Agustus","September","Oktober","November","Desember"];
+
+const TABS = [
+  { id: "detail",    label: "Data Detail",                cols: ["tanggal","produk","section","sales","no_faktur","nama_toko","alamat","tagihan_nominal","minyak_cash","minyak_transfer","rupa_cash","rupa_transfer","total_pembayaran","ket"] },
+  { id: "harian",    label: "Rekap Harian",                cols: ["tanggal","jml_transaksi","total_tagihan","minyak_cash","minyak_transfer","rupa_cash","rupa_transfer","total_pembayaran"] },
+  { id: "piutang",   label: "Piutang Tempo",               cols: ["tanggal","produk","sales","no_faktur","nama_toko","alamat","tagihan_nominal","minyak_cash","minyak_transfer","rupa_cash","rupa_transfer","total_pembayaran","ket"] },
+  { id: "dropping",  label: "Cash Dropping",               cols: ["tanggal","produk","sales","no_faktur","nama_toko","alamat","tagihan_nominal","minyak_cash","minyak_transfer","rupa_cash","rupa_transfer","total_pembayaran","ket"] },
+  { id: "minyak",    label: "Rekap Minyak & Rupa2",        cols: ["tanggal","minyak_cash","minyak_transfer","rupa_cash","rupa_transfer","total_minyak","total_rupa","total_cash","total_transfer"] },
+  { id: "bulanan",   label: "Data Bulanan",                cols: ["bulan","jml_transaksi","jml_hari","jml_toko","total_tagihan","minyak_cash","minyak_transfer","rupa_cash","rupa_transfer","total_minyak","total_rupa","total_cash","total_transfer","total_pembayaran"] },
+];
+
+const NUM_COLS = new Set(["tagihan_nominal","minyak_cash","minyak_transfer","rupa_cash","rupa_transfer","total_pembayaran","jml_transaksi","total_tagihan","total_minyak","total_rupa","total_cash","total_transfer","jml_toko","jml_hari"]);
+
+const COL_LABELS = {
+  tanggal: "Tanggal", produk: "Produk", bulan: "Bulan", section: "Section",
+  sales: "Sales", no_faktur: "No. Faktur", nama_toko: "Nama Toko", alamat: "Alamat",
+  tagihan_nominal: "Tagihan", minyak_cash: "Minyak Cash", minyak_transfer: "Minyak Transfer",
+  rupa_cash: "Rupa Cash", rupa_transfer: "Rupa Transfer", total_pembayaran: "Total Pembayaran",
+  ket: "Keterangan", jml_transaksi: "Jml Transaksi", total_tagihan: "Total Tagihan",
+  total_minyak: "Total Minyak", total_rupa: "Total Rupa", total_cash: "Total Cash",
+  total_transfer: "Total Transfer", jml_toko: "Jml Toko", jml_hari: "Jml Hari",
+};
+
+const INTERNAL_KEYS = new Set(["_haystack", "sheet", "bulanNum", "tglSort"]);
+
+const TAB_EXPORT_MAP = {
+  detail:   { name: 'Data Detail',         key: 'detail'   },
+  harian:   { name: 'Rekap Harian',        key: 'harian'   },
+  piutang:  { name: 'Piutang Tempo',       key: 'piutang'  },
+  dropping: { name: 'Cash Dropping',       key: 'dropping' },
+  minyak:   { name: 'Rekap Minyak & Rupa2', key: 'minyak'  },
+  bulanan:  { name: 'Data Bulanan',        key: 'bulanan'  },
+};
+
+const IDB_NAME  = 'um-fixv1';
+const IDB_STORE = 'um-data';
+const IDB_KEY   = 'latest';
+
+const state = { records: [], views: null, fileName: '' };
+let currentTab = 'detail';
+
+/* ===== VIRTUAL TABLE CONFIG ===== */
+const VT_ROW_H = 30;
+const VT_BUFFER = 30;
+
+let _searchTimer = null;
+function scheduleRender() {
+  clearTimeout(_searchTimer);
+  _searchTimer = setTimeout(renderAll, 200);
+}
+
+let _toastTimer = null;
+function showToast(msg, duration) {
+  const el = document.getElementById('toast');
+  if (!el) return;
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(_toastTimer);
+  _toastTimer = setTimeout(() => el.classList.remove('show'), duration || 2500);
+}
+
+function showLoading(text) {
+  const el = document.getElementById('loadingOverlay');
+  document.getElementById('loadingText').textContent = text || 'Memproses...';
+  el.classList.add('show');
+}
+function hideLoading() {
+  document.getElementById('loadingOverlay').classList.remove('show');
+}
+
+/* ===== INDEXEDDB ===== */
+function idbOpen() {
+  return new Promise((resolve, reject) => {
+    if (!('indexedDB' in window)) { reject(new Error('IndexedDB tidak tersedia')); return; }
+    const req = indexedDB.open(IDB_NAME, 1);
+    req.onupgradeneeded = e => {
+      const db = e.target.result;
+      if (!db.objectStoreNames.contains(IDB_STORE)) db.createObjectStore(IDB_STORE);
+    };
+    req.onsuccess = e => resolve(e.target.result);
+    req.onerror = e => reject(e.target.error);
+  });
+}
+async function idbSave(payload) {
+  const db = await idbOpen();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(IDB_STORE, 'readwrite');
+    tx.objectStore(IDB_STORE).put(payload, IDB_KEY);
+    tx.oncomplete = () => { db.close(); resolve(); };
+    tx.onerror = e => { db.close(); reject(e.target.error); };
+  });
+}
+async function idbLoad() {
+  const db = await idbOpen();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(IDB_STORE, 'readonly');
+    const req = tx.objectStore(IDB_STORE).get(IDB_KEY);
+    req.onsuccess = e => { db.close(); resolve(e.target.result); };
+    req.onerror = e => { db.close(); reject(e.target.error); };
+  });
+}
+async function idbClear() {
+  const db = await idbOpen();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(IDB_STORE, 'readwrite');
+    tx.objectStore(IDB_STORE).delete(IDB_KEY);
+    tx.oncomplete = () => { db.close(); resolve(); };
+    tx.onerror = e => { db.close(); reject(e.target.error); };
+  });
+}
+
+function saveToIDB(silent) {
+  if (!('indexedDB' in window)) return;
+  if (!state.records || !state.records.length) return;
+  idbSave({
+    records: state.records,
+    fileName: state.fileName || '',
+    savedAt: Date.now(),
+  }).then(() => {
+    if (!silent) showToast('💾 Data tersimpan otomatis di browser', 2000);
+  }).catch(e => {
+    console.warn('[idb] save failed:', e);
+    if (!silent) showToast('⚠️ Gagal menyimpan data ke browser', 2500);
+  });
+}
+
+async function tryAutoLoad() {
+  if (!('indexedDB' in window)) return false;
+  try {
+    showLoading('Memuat data tersimpan...');
+    const saved = await idbLoad();
+    if (!saved || !saved.records || !saved.records.length) { hideLoading(); return false; }
+    state.records = saved.records;
+    state.fileName = saved.fileName || 'data_tersimpan.xlsx';
+    for (const r of state.records) {
+      if (typeof r._haystack !== 'string') {
+        r._haystack = ((r.nama_toko || '') + ' ' + (r.no_faktur || '') + ' ' +
+          (r.sales || '') + ' ' + (r.alamat || '')).toLowerCase();
+      }
+    }
+    refreshFilterOptions(state.records);
+    renderAll();
+    hideLoading();
+    showToast('📂 Data tersimpan dimuat (' + state.records.length.toLocaleString('id-ID') + ' baris)', 3000);
+    return true;
+  } catch (e) {
+    console.warn('[idb] load failed:', e);
+    hideLoading();
+    return false;
+  }
+}
+
+/* ===== MODAL HAPUS PER BULAN ===== */
+function openDeleteModal() {
+  if (!state.records.length) { showToast('Belum ada data untuk dihapus', 2000); return; }
+  const map = new Map();
+  for (const r of state.records) {
+    if (!r.bulan) continue;
+    const cur = map.get(r.bulan) || { bulan: r.bulan, bulanNum: r.bulanNum || 0, count: 0 };
+    cur.count++;
+    if (r.bulanNum) cur.bulanNum = r.bulanNum;
+    map.set(r.bulan, cur);
+  }
+  const list = [...map.values()].sort((a,b) => a.bulanNum - b.bulanNum);
+
+  const container = document.getElementById('deleteMonthList');
+  container.innerHTML = list.map(m => `
+    <label class="month-item" data-bulan="${escHtml(m.bulan)}">
+      <input type="checkbox" value="${escHtml(m.bulan)}" onchange="updateDeleteButton(); toggleMonthItemClass(this)">
+      <span class="lbl">${escHtml(m.bulan)}</span>
+      <span class="cnt">${m.count.toLocaleString('id-ID')} baris</span>
+    </label>
+  `).join("");
+
+  document.getElementById('selectAllMonths').checked = false;
+  updateDeleteButton();
+  document.getElementById('deleteModal').classList.add('show');
+}
+
+function closeDeleteModal() {
+  document.getElementById('deleteModal').classList.remove('show');
+}
+function toggleMonthItemClass(checkbox) {
+  const item = checkbox.closest('.month-item');
+  if (item) item.classList.toggle('checked', checkbox.checked);
+}
+function toggleSelectAllMonths(checked) {
+  document.querySelectorAll('#deleteMonthList input[type=checkbox]').forEach(b => {
+    b.checked = checked; toggleMonthItemClass(b);
+  });
+  updateDeleteButton();
+}
+function updateDeleteButton() {
+  const checked = document.querySelectorAll('#deleteMonthList input[type=checkbox]:checked');
+  const btn = document.getElementById('btnConfirmDelete');
+  btn.disabled = checked.length === 0;
+  btn.textContent = checked.length === 0
+    ? 'Hapus Terpilih'
+    : `Hapus ${checked.length} Bulan Terpilih`;
+}
+function confirmDeleteMonths() {
+  const checked = [...document.querySelectorAll('#deleteMonthList input[type=checkbox]:checked')]
+    .map(i => i.value);
+  if (!checked.length) return;
+  const setBulan = new Set(checked);
+  const totalRows = state.records.reduce((s, r) => s + (setBulan.has(r.bulan) ? 1 : 0), 0);
+  const listStr = checked.join(', ');
+  const ok = confirm(
+    `Hapus ${totalRows.toLocaleString('id-ID')} baris dari ${checked.length} bulan?\n\n` +
+    `Bulan: ${listStr}\n\nTindakan ini tidak bisa dibatalkan.`
+  );
+  if (!ok) return;
+
+  state.records = state.records.filter(r => !setBulan.has(r.bulan));
+  closeDeleteModal();
+
+  if (!state.records.length) {
+    idbClear().then(() => { resetApp(); showToast('🗑️ Semua data telah dihapus', 2500); }).catch(() => resetApp());
+    return;
+  }
+
+  document.getElementById('fSearch').value = "";
+  document.getElementById('filterBulan').value = "";
+  document.getElementById('filterTanggal').value = "";
+  document.getElementById('filterSales').value = "";
+  refreshFilterOptions(state.records);
+  renderAll();
+  saveToIDB(true).catch(() => {});
+  showToast(`🗑️ ${totalRows.toLocaleString('id-ID')} baris dihapus (${listStr})`, 3000);
+}
+
+/* ===== UPLOAD BARU ===== */
+function confirmNewUpload() {
+  if (!state.records.length) { document.getElementById('fileInput').click(); return; }
+  const ok = confirm('Mulai upload baru?\n\n' +
+    '• Data yang tersimpan di browser akan dihapus\n' +
+    '• Anda akan kembali ke kondisi awal untuk upload file baru\n' +
+    '• Tindakan ini tidak bisa dibatalkan');
+  if (ok) {
+    idbClear().then(() => {
+      resetApp();
+      showToast('↻ Siap untuk upload baru', 2000);
+      setTimeout(() => document.getElementById('fileInput').click(), 300);
+    }).catch(e => alert('Gagal menghapus data lama: ' + (e.message || e)));
+  }
+}
+
+function resetApp() {
+  state.records = []; state.views = null; state.fileName = '';
+  currentTab = 'detail';
+  clearTimeout(_searchTimer);
+  document.getElementById('fSearch').value = '';
+  document.getElementById('filterBulan').innerHTML = '<option value="">Semua</option>';
+  document.getElementById('filterTanggal').innerHTML = '<option value="">Semua</option>';
+  document.getElementById('filterSales').innerHTML = '<option value="">Semua</option>';
+  for (const t of TABS) {
+    const wrap = document.getElementById('wrap-' + t.id);
+    if (wrap) wrap.innerHTML = `<div class="empty">Belum ada data. Upload file Excel dulu.</div>`;
+  }
+  renderCards([]);
+  updateExportButtons();
+  document.getElementById('fileInput').value = '';
+  const titleEl = document.querySelector('header .title h1');
+  if (titleEl) titleEl.textContent = 'Laporan Uang Masuk';
+  const firstTab = document.querySelector('#tabs .tab');
+  if (firstTab) switchTab(firstTab);
+}
+
+/* ===== HELPERS ===== */
+function num(v) {
+  if (v === null || v === undefined || v === "") return 0;
+  if (typeof v === "number") return v;
+  const s = String(v).replace(/[^\d.-]/g, "");
+  const n = parseFloat(s);
+  return isNaN(n) ? 0 : n;
+}
+function resolvePay(val, tagihan) {
+  if (val === null || val === undefined || val === "") return 0;
+  if (typeof val === "number") return val;
+  const s = String(val).trim();
+  if (/^=I\d+/i.test(s)) return tagihan;
+  if (s.startsWith("=")) return 0;
+  return num(s);
+}
+function fmt(n) {
+  if (typeof n !== "number") return n ?? "";
+  if (Number.isInteger(n)) return n.toLocaleString("id-ID");
+  return n.toLocaleString("id-ID", {maximumFractionDigits: 2});
+}
+function rp(n) { return "Rp " + fmt(n || 0); }
+function escHtml(s) {
+  return String(s == null ? "" : s)
+    .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+}
+
+function parseSheetDate(sheetName) {
+  const m = String(sheetName).match(/^(\d{1,2})[-/](\d{1,2})/);
+  if (!m) return { tanggal: sheetName, bulanNum: 0, bulanLabel: sheetName, tglSort: 0 };
+  const d = parseInt(m[1], 10);
+  const mo = parseInt(m[2], 10);
+  const label = `${String(d).padStart(2,"0")}/${String(mo).padStart(2,"0")}`;
+  const bulanLabel = BULAN_NAMA[mo-1] || `Bulan-${mo}`;
+  return { tanggal: label, bulanNum: mo, bulanLabel, tglSort: mo*100 + d };
+}
+
+function parseWorkbook(wb) {
+  const records = [];
+  for (const sheetName of wb.SheetNames) {
+    if (sheetName.toUpperCase() === "SHEET") continue;
+    const info = parseSheetDate(sheetName);
+    const ws = wb.Sheets[sheetName];
+    const rows = XLSX.utils.sheet_to_json(ws, { header: 1, raw: true, defval: null });
+    let section = null;
+    let currentSales = null;
+
+    for (const row of rows) {
+      const vals = row || [];
+      const text = vals.filter(v => v !== null && v !== undefined).join(" ").toUpperCase();
+
+      if (text.includes("PIUTANG TEMPO")) { section = "PIUTANG TEMPO"; currentSales = null; continue; }
+      if (text.includes("CASH DROPPING")) { section = "CASH DROPPING"; currentSales = null; continue; }
+      if (text.includes("UANG MASUK DARI PIUTANG") || text.includes("UANG MASUK CASH") || text.includes("TOTAL UANG MASUK")) { section = null; continue; }
+      if (!section) continue;
+
+      const colNo = String(vals[1] ?? "").trim().toUpperCase();
+      const colSales = String(vals[2] ?? "").trim();
+      const colSalesU = colSales.toUpperCase();
+
+      if (colNo === "NO" || colSalesU === "SALES" || colSalesU === "DROPPING/SALES") continue;
+      if (colNo === "TOTAL") continue;
+      if (!vals[3] && !vals[8]) continue;
+
+      if (colSales && colSalesU !== "NAN") currentSales = colSales;
+
+      const tagihan = num(vals[8]);
+      const mc = resolvePay(vals[9], tagihan);
+      const mt = resolvePay(vals[10], tagihan);
+      const rc = resolvePay(vals[11], tagihan);
+      const rt = resolvePay(vals[12], tagihan);
+      const hasMinyak = (mc + mt) > 0;
+      const hasRupa = (rc + rt) > 0;
+      let produk = "";
+      if (hasMinyak && hasRupa) produk = "MINYAK & RUPA RUPA";
+      else if (hasMinyak) produk = "MINYAK";
+      else if (hasRupa) produk = "RUPA RUPA";
+
+      const salesStr = currentSales || "";
+      const tokoStr = String(vals[4] ?? "").trim();
+      const alamatStr = String(vals[5] ?? "").trim();
+      const fakturStr = String(vals[3] ?? "");
+
+      records.push({
+        sheet: sheetName, tanggal: info.tanggal, bulan: info.bulanLabel,
+        bulanNum: info.bulanNum, tglSort: info.tglSort, section, produk,
+        sales: salesStr, no_faktur: fakturStr, nama_toko: tokoStr, alamat: alamatStr,
+        tagihan_nominal: tagihan, minyak_cash: mc, minyak_transfer: mt,
+        rupa_cash: rc, rupa_transfer: rt, total_pembayaran: mc + mt + rc + rt,
+        ket: vals[13] ?? "",
+        _haystack: (tokoStr + " " + fakturStr + " " + salesStr + " " + alamatStr).toLowerCase(),
+      });
+    }
+  }
+  return records;
+}
+
+function buildViews(records) {
+  const detail = records.slice().sort((a,b)=> a.tglSort-b.tglSort);
+
+  const harianMap = {};
+  for (const r of records) {
+    const k = r.bulan + "|" + r.tanggal;
+    if (!harianMap[k]) harianMap[k] = { tanggal: r.tanggal, bulan: r.bulan, tglSort: r.tglSort, jml_transaksi: 0, total_tagihan: 0, minyak_cash: 0, minyak_transfer: 0, rupa_cash: 0, rupa_transfer: 0, total_pembayaran: 0 };
+    const o = harianMap[k];
+    o.jml_transaksi++; o.total_tagihan += r.tagihan_nominal;
+    o.minyak_cash += r.minyak_cash; o.minyak_transfer += r.minyak_transfer;
+    o.rupa_cash += r.rupa_cash; o.rupa_transfer += r.rupa_transfer;
+    o.total_pembayaran += r.total_pembayaran;
+  }
+  const harian = Object.values(harianMap).sort((a,b)=> a.tglSort-b.tglSort);
+
+  const piutang = records.filter(r => r.section === "PIUTANG TEMPO").sort((a,b)=> a.tglSort-b.tglSort);
+  const dropping = records.filter(r => r.section === "CASH DROPPING").sort((a,b)=> a.tglSort-b.tglSort);
+
+  const minyakMap = {};
+  for (const r of records) {
+    const k = r.bulan + "|" + r.tanggal;
+    if (!minyakMap[k]) minyakMap[k] = { tanggal: r.tanggal, bulan: r.bulan, tglSort: r.tglSort, minyak_cash: 0, minyak_transfer: 0, rupa_cash: 0, rupa_transfer: 0 };
+    const o = minyakMap[k];
+    o.minyak_cash += r.minyak_cash; o.minyak_transfer += r.minyak_transfer;
+    o.rupa_cash += r.rupa_cash; o.rupa_transfer += r.rupa_transfer;
+  }
+  const minyak = Object.values(minyakMap).map(o => ({
+    ...o, total_minyak: o.minyak_cash + o.minyak_transfer,
+    total_rupa: o.rupa_cash + o.rupa_transfer,
+    total_cash: o.minyak_cash + o.rupa_cash,
+    total_transfer: o.minyak_transfer + o.rupa_transfer,
+  })).sort((a,b)=> a.tglSort-b.tglSort);
+
+  const bulanMap = {};
+  for (const r of records) {
+    const k = r.bulan;
+    if (!bulanMap[k]) bulanMap[k] = {
+      bulan: r.bulan, bulanNum: r.bulanNum,
+      jml_transaksi: 0, _hariSet: new Set(), _tokoSet: new Set(),
+      total_tagihan: 0, minyak_cash: 0, minyak_transfer: 0,
+      rupa_cash: 0, rupa_transfer: 0, total_pembayaran: 0
+    };
+    const o = bulanMap[k];
+    o.jml_transaksi++; o._hariSet.add(r.tanggal);
+    if (r.nama_toko) o._tokoSet.add(r.nama_toko);
+    o.total_tagihan += r.tagihan_nominal;
+    o.minyak_cash += r.minyak_cash; o.minyak_transfer += r.minyak_transfer;
+    o.rupa_cash += r.rupa_cash; o.rupa_transfer += r.rupa_transfer;
+    o.total_pembayaran += r.total_pembayaran;
+  }
+  const bulanan = Object.values(bulanMap).map(o => ({
+    bulan: o.bulan, jml_transaksi: o.jml_transaksi, jml_hari: o._hariSet.size,
+    jml_toko: o._tokoSet.size, total_tagihan: o.total_tagihan,
+    minyak_cash: o.minyak_cash, minyak_transfer: o.minyak_transfer,
+    rupa_cash: o.rupa_cash, rupa_transfer: o.rupa_transfer,
+    total_minyak: o.minyak_cash + o.minyak_transfer,
+    total_rupa: o.rupa_cash + o.rupa_transfer,
+    total_cash: o.minyak_cash + o.rupa_cash,
+    total_transfer: o.minyak_transfer + o.rupa_transfer,
+    total_pembayaran: o.total_pembayaran,
+  })).sort((a,b)=> a.bulanNum - b.bulanNum);
+
+  return { detail, harian, piutang, dropping, minyak, bulanan };
+}
+
+function applyFilter(records) {
+  const fBulan   = document.getElementById("filterBulan").value;
+  const fTanggal = document.getElementById("filterTanggal").value;
+  const fSales   = document.getElementById("filterSales").value;
+  const q        = (document.getElementById("fSearch").value || "").toLowerCase().trim();
+
+  const hasQ = !!q, hasBulan = !!fBulan, hasTanggal = !!fTanggal, hasSales = !!fSales;
+  if (!hasQ && !hasBulan && !hasTanggal && !hasSales) return records.slice();
+
+  const out = [];
+  for (let i = 0; i < records.length; i++) {
+    const r = records[i];
+    if (hasBulan && r.bulan !== fBulan) continue;
+    if (hasTanggal && r.tanggal !== fTanggal) continue;
+    if (hasSales && r.sales !== fSales) continue;
+    if (hasQ && r._haystack.indexOf(q) === -1) continue;
+    out.push(r);
+  }
+  return out;
+}
+
+function refreshFilterOptions(allRecords) {
+  const bulanSel = document.getElementById("filterBulan");
+  const bulanSet = new Map();
+  for (const r of allRecords) if (r.bulanNum) bulanSet.set(r.bulan, r.bulanNum);
+  const bulanList = [...bulanSet.entries()].sort((a,b)=> a[1]-b[1]);
+  bulanSel.innerHTML = `<option value="">Semua</option>` +
+    bulanList.map(([label]) => `<option value="${escHtml(label)}">${escHtml(label)}</option>`).join("");
+
+  const salesSel = document.getElementById("filterSales");
+  const salesSet = new Set();
+  for (const r of allRecords) if (r.sales) salesSet.add(r.sales);
+  const salesList = [...salesSet].sort((a,b)=> a.localeCompare(b, "id", { sensitivity: "base" }));
+  salesSel.innerHTML = `<option value="">Semua</option>` +
+    salesList.map(s => `<option value="${escHtml(s)}">${escHtml(s)}</option>`).join("");
+
+  refreshTanggalOptions(allRecords);
+}
+
+function refreshTanggalOptions(allRecords) {
+  const fBulan = document.getElementById("filterBulan").value;
+  const tglSel = document.getElementById("filterTanggal");
+  const curVal = tglSel.value;
+  const map = new Map();
+  for (const r of allRecords) {
+    if (fBulan && r.bulan !== fBulan) continue;
+    map.set(r.tanggal, r.tglSort);
+  }
+  const list = [...map.entries()].sort((a,b)=> a[1]-b[1]);
+  tglSel.innerHTML = `<option value="">Semua</option>` +
+    list.map(([label]) => `<option value="${escHtml(label)}">${escHtml(label)}</option>`).join("");
+  if ([...tglSel.options].some(o => o.value === curVal)) tglSel.value = curVal;
+  else tglSel.value = "";
+}
+
+function renderTabs() {
+  const tabsEl = document.getElementById("tabs");
+  const panelsEl = document.getElementById("panels");
+  tabsEl.innerHTML = "";
+  panelsEl.innerHTML = "";
+  TABS.forEach((t, i) => {
+    const tab = document.createElement("div");
+    tab.className = "tab" + (i === 0 ? " active" : "");
+    tab.textContent = t.label;
+    tab.setAttribute("data-tab", t.id);
+    tab.onclick = function(e) { e.preventDefault(); switchTab(this); };
+    tabsEl.appendChild(tab);
+
+    const panel = document.createElement("div");
+    panel.className = "panel" + (i === 0 ? " active" : "");
+    panel.id = "panel-" + t.id;
+    panel.innerHTML = `<div class="table-wrap" id="wrap-${t.id}"><div class="empty">Belum ada data. Upload file Excel dulu.</div></div>`;
+    panelsEl.appendChild(panel);
+  });
+}
+
+function switchTab(el) {
+  const tabName = el.getAttribute("data-tab");
+  if (!tabName) return;
+  currentTab = tabName;
+  document.querySelectorAll("#tabs .tab").forEach(t => {
+    t.classList.toggle("active", t.getAttribute("data-tab") === tabName);
+  });
+  document.querySelectorAll(".panel").forEach(p => {
+    p.classList.toggle("active", p.id === "panel-" + tabName);
+  });
+  updateExportButtons();
+}
+
+/* ========== VIRTUAL TABLE ========== */
+function createVirtualTable(container, headersHTML, rowsArr, colCount, footerRowHTML, totalRows) {
+  container.innerHTML = '';
+
+  const outer = document.createElement('div');
+  outer.className = 'vt-outer';
+
+  const wrap = document.createElement('div');
+  wrap.className = 'vt-wrap';
+
+  const tbl = document.createElement('table');
+  tbl.className = 'vt-table';
+
+  const thead = document.createElement('thead');
+  thead.innerHTML = headersHTML;
+  tbl.appendChild(thead);
+
+  const tbody = document.createElement('tbody');
+  tbl.appendChild(tbody);
+
+  const tfoot = document.createElement('tfoot');
+  tfoot.innerHTML = footerRowHTML;
+  tbl.appendChild(tfoot);
+
+  wrap.appendChild(tbl);
+  outer.appendChild(wrap);
+  container.appendChild(outer);
+
+  let lastStart = -1, lastEnd = -1, rafPending = false;
+
+  function paint() {
+    rafPending = false;
+    const st = wrap.scrollTop;
+    const vh = wrap.clientHeight || 600;
+    const startIdx = Math.max(0, Math.floor(st / VT_ROW_H) - VT_BUFFER);
+    const endIdx   = Math.min(totalRows, Math.ceil((st + vh) / VT_ROW_H) + VT_BUFFER);
+    if (startIdx === lastStart && endIdx === lastEnd) return;
+    lastStart = startIdx; lastEnd = endIdx;
+
+    const topH = startIdx * VT_ROW_H;
+    const botH = (totalRows - endIdx) * VT_ROW_H;
+
+    const parts = [];
+    if (topH > 0)
+      parts.push('<tr class="vt-spacer"><td colspan="' + colCount +
+                 '" style="height:' + topH + 'px"></td></tr>');
+    for (let i = startIdx; i < endIdx; i++) parts.push(rowsArr[i]);
+    if (botH > 0)
+      parts.push('<tr class="vt-spacer"><td colspan="' + colCount +
+                 '" style="height:' + botH + 'px"></td></tr>');
+
+    tbody.innerHTML = parts.join('');
+  }
+
+  wrap.addEventListener('scroll', () => {
+    if (rafPending) return;
+    rafPending = true;
+    requestAnimationFrame(paint);
+  }, { passive: true });
+
+  if (window.ResizeObserver) {
+    new ResizeObserver(() => { lastStart = -1; paint(); }).observe(wrap);
+  } else {
+    window.addEventListener('resize', () => { lastStart = -1; paint(); });
+  }
+
+  requestAnimationFrame(() => { lastStart = -1; paint(); });
+}
+
+/* ========== RENDER TABEL (virtual) ========== */
+function renderTable(tabId, cols, rows) {
+  const wrap = document.getElementById("wrap-" + tabId);
+  if (!wrap) return;
+
+  if (!rows || !rows.length) {
+    wrap.innerHTML = `<div class="empty">Tidak ada data.</div>`;
+    return;
+  }
+
+  const headersHTML = "<tr>" + cols.map(c => {
+    const label = COL_LABELS[c] || c.replace(/_/g, " ");
+    return `<th class="${NUM_COLS.has(c) ? "num" : ""}">${escHtml(label)}</th>`;
+  }).join("") + "</tr>";
+
+  const rowsArr = new Array(rows.length);
+  for (let i = 0; i < rows.length; i++) {
+    const r = rows[i];
+    let html = "<tr>";
+    for (let j = 0; j < cols.length; j++) {
+      const c = cols[j];
+      const v = r[c];
+      const isNum = NUM_COLS.has(c);
+      html += `<td class="${isNum ? "num" : ""}">${isNum ? fmt(v) : escHtml(v)}</td>`;
+    }
+    html += "</tr>";
+    rowsArr[i] = html;
+  }
+
+  const totals = {};
+  for (const c of cols) {
+    if (NUM_COLS.has(c)) {
+      let s = 0;
+      for (let i = 0; i < rows.length; i++) s += (Number(rows[i][c]) || 0);
+      totals[c] = s;
+    }
+  }
+  let labelPlaced = false;
+  const footerRowHTML = "<tr>" + cols.map(c => {
+    if (NUM_COLS.has(c)) return `<td class="num">${fmt(totals[c])}</td>`;
+    if (!labelPlaced) { labelPlaced = true; return `<td>TOTAL</td>`; }
+    return `<td></td>`;
+  }).join("") + "</tr>";
+
+  createVirtualTable(wrap, headersHTML, rowsArr, cols.length, footerRowHTML, rows.length);
+}
+
+function renderCards(records) {
+  let totalFaktur = 0, minyakCash = 0, minyakTransfer = 0;
+  let rupaCash = 0, rupaTransfer = 0, jml = 0;
+  for (const r of records) {
+    totalFaktur += r.tagihan_nominal || 0;
+    minyakCash += r.minyak_cash || 0;
+    minyakTransfer += r.minyak_transfer || 0;
+    rupaCash += r.rupa_cash || 0;
+    rupaTransfer += r.rupa_transfer || 0;
+    jml++;
+  }
+  const totalMinyak = minyakCash + minyakTransfer;
+  const totalRupa = rupaCash + rupaTransfer;
+  const grand = totalMinyak + totalRupa;
+
+  document.getElementById("cardFaktur").textContent = rp(totalFaktur);
+  document.getElementById("cardFakturSub").textContent = `${fmt(jml)} transaksi`;
+  document.getElementById("cardMinyak").textContent = rp(totalMinyak);
+  document.getElementById("cardMinyakSub").textContent = `Cash: ${fmt(minyakCash)} • TF: ${fmt(minyakTransfer)}`;
+  document.getElementById("cardRupa").textContent = rp(totalRupa);
+  document.getElementById("cardRupaSub").textContent = `Cash: ${fmt(rupaCash)} • TF: ${fmt(rupaTransfer)}`;
+  document.getElementById("cardGrand").textContent = rp(grand);
+  document.getElementById("cardGrandSub").textContent = `Cash: ${fmt(minyakCash + rupaCash)} • TF: ${fmt(minyakTransfer + rupaTransfer)}`;
+}
+
+function updateExportButtons() {
+  const hasData = state.records.length > 0;
+  document.getElementById('btnExportAll').disabled = !hasData;
+  document.getElementById('btnExportCurrent').disabled = !hasData;
+}
+
+function renderAll() {
+  const all = state.records;
+  const filtered = applyFilter(all);
+  const views = buildViews(filtered);
+  state.views = views;
+  renderCards(filtered);
+
+  const map = {
+    detail: views.detail, harian: views.harian, piutang: views.piutang,
+    dropping: views.dropping, minyak: views.minyak, bulanan: views.bulanan,
+  };
+  const colsMap = Object.fromEntries(TABS.map(t => [t.id, t.cols]));
+  for (const t of TABS) renderTable(t.id, colsMap[t.id], map[t.id]);
+
+  updateExportButtons();
+
+  const titleEl = document.querySelector("header .title h1");
+  const fB = document.getElementById("filterBulan").value;
+  if (titleEl) titleEl.textContent = fB ? `Laporan Uang Masuk ${fB}` : "Laporan Uang Masuk";
+}
+
+function processFile(file) {
+  clearTimeout(_searchTimer);
+  state.fileName = file.name || '';
+  showLoading("Membaca file: " + state.fileName);
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const wb = XLSX.read(e.target.result, { type: "array", cellDates: false });
+      state.records = parseWorkbook(wb);
+      document.getElementById("fSearch").value = "";
+      document.getElementById("filterBulan").value = "";
+      document.getElementById("filterTanggal").value = "";
+      document.getElementById("filterSales").value = "";
+      refreshFilterOptions(state.records);
+      renderAll();
+      hideLoading();
+      saveToIDB();
+    } catch (err) {
+      console.error(err);
+      hideLoading();
+      alert("Gagal membaca file: " + err.message);
+    }
+  };
+  reader.onerror = () => { hideLoading(); alert("Gagal membaca file."); };
+  reader.readAsArrayBuffer(file);
+}
+
+function cleanRowsForExport(rows) {
+  return rows.map(r => {
+    const out = {};
+    for (const k in r) {
+      if (!Object.prototype.hasOwnProperty.call(r, k)) continue;
+      if (INTERNAL_KEYS.has(k)) continue;
+      out[k] = r[k];
+    }
+    return out;
+  });
+}
+
+function buildExportFilename(suffix) {
+  const fB = document.getElementById("filterBulan").value || "Semua";
+  const fT = document.getElementById("filterTanggal").value || "Semua";
+  const fS = document.getElementById("filterSales").value || "Semua";
+  return `Rekap_UangMasuk_${suffix}_${fB}_${fT}_${fS}.xlsx`;
+}
+
+/* ============================================================
+   STYLED EXPORT — warna header biru, border, numFmt #,##0
+   ============================================================ */
+const XL_CLR = {
+  BLUE:   "1F3B73",
+  WHITE:  "FFFFFF",
+  GRAY:   "D0D5DD",
+  FOOTER: "E8EEF8",
+};
+
+const XL_BD = {
+  top:    { style: "thin", color: { rgb: XL_CLR.GRAY } },
+  bottom: { style: "thin", color: { rgb: XL_CLR.GRAY } },
+  left:   { style: "thin", color: { rgb: XL_CLR.GRAY } },
+  right:  { style: "thin", color: { rgb: XL_CLR.GRAY } },
+};
+const XL_BD_W = {
+  top:    { style: "thin", color: { rgb: XL_CLR.WHITE } },
+  bottom: { style: "thin", color: { rgb: XL_CLR.WHITE } },
+  left:   { style: "thin", color: { rgb: XL_CLR.WHITE } },
+  right:  { style: "thin", color: { rgb: XL_CLR.WHITE } },
+};
+
+const XL_STYLE = {
+  headerL: {
+    font: { bold: true, sz: 11, color: { rgb: XL_CLR.WHITE } },
+    fill: { fgColor: { rgb: XL_CLR.BLUE }, patternType: "solid" },
+    alignment: { horizontal: "left", vertical: "center", wrapText: true },
+    border: XL_BD_W,
+  },
+  headerR: {
+    font: { bold: true, sz: 11, color: { rgb: XL_CLR.WHITE } },
+    fill: { fgColor: { rgb: XL_CLR.BLUE }, patternType: "solid" },
+    alignment: { horizontal: "right", vertical: "center", wrapText: true },
+    border: XL_BD_W,
+  },
+  cellL: {
+    font: { sz: 11 },
+    alignment: { horizontal: "left", vertical: "center" },
+    border: XL_BD,
+  },
+  cellR: {
+    font: { sz: 11 },
+    alignment: { horizontal: "right", vertical: "center" },
+    border: XL_BD,
+    numFmt: "#,##0",
+  },
+  footerL: {
+    font: { bold: true, sz: 11, color: { rgb: XL_CLR.BLUE } },
+    fill: { fgColor: { rgb: XL_CLR.FOOTER }, patternType: "solid" },
+    alignment: { horizontal: "left", vertical: "center" },
+    border: XL_BD,
+  },
+  footerR: {
+    font: { bold: true, sz: 11, color: { rgb: XL_CLR.BLUE } },
+    fill: { fgColor: { rgb: XL_CLR.FOOTER }, patternType: "solid" },
+    alignment: { horizontal: "right", vertical: "center" },
+    border: XL_BD,
+    numFmt: "#,##0",
+  },
+};
+
+/* Lebar kolom pintar berdasarkan jenis kolom */
+function colWidth(key) {
+  switch (key) {
+    case "tanggal":         return 10;
+    case "bulan":           return 14;
+    case "produk":          return 18;
+    case "section":         return 15;
+    case "sales":           return 14;
+    case "no_faktur":       return 14;
+    case "nama_toko":       return 30;
+    case "alamat":          return 32;
+    case "ket":             return 20;
+    case "jml_transaksi":
+    case "jml_hari":
+    case "jml_toko":        return 11;
+    default:                return 16; // kolom numerik uang
+  }
+}
+
+/**
+ * Bangun worksheet ber-styling dari array rows (view objects).
+ * - Header biru teks putih bold
+ * - Data cell: border, kiri untuk teks, kanan + numFmt #,##0 untuk angka
+ * - Baris TOTAL di bawah: footer biru muda
+ */
+function buildStyledSheet(tabId, rows) {
+  const tab = TABS.find(t => t.id === tabId);
+  if (!tab) return null;
+  const cols = tab.cols;
+  const N = cols.length;
+
+  // Baris header
+  const aoa = [cols.map(c => COL_LABELS[c] || c)];
+
+  // Baris data
+  const cleaned = cleanRowsForExport(rows);
+  for (const r of cleaned) {
+    aoa.push(cols.map(c => {
+      const v = r[c];
+      if (NUM_COLS.has(c)) return Number(v) || 0;
+      return v == null ? "" : v;
+    }));
+  }
+
+  // Baris TOTAL
+  const totalRow = cols.map((c, i) => {
+    if (NUM_COLS.has(c)) {
+      let s = 0;
+      for (const r of rows) s += Number(r[c]) || 0;
+      return s;
+    }
+    if (i === 0) return "TOTAL";
+    return "";
+  });
+  aoa.push(totalRow);
+
+  // Sheet + lebar kolom
+  const ws = XLSX.utils.aoa_to_sheet(aoa);
+  ws["!cols"] = cols.map(c => ({ wch: colWidth(c) }));
+
+  const addr = (r, c) => XLSX.utils.encode_cell({ r, c });
+  const setStyle = (r, c, style) => {
+    const a = addr(r, c);
+    if (!ws[a]) ws[a] = { t: "s", v: "" };
+    ws[a].s = style;
+  };
+
+  const totalRowIdx = aoa.length - 1;
+
+  // Style header
+  for (let c = 0; c < N; c++) {
+    setStyle(0, c, NUM_COLS.has(cols[c]) ? XL_STYLE.headerR : XL_STYLE.headerL);
+  }
+  // Style data
+  for (let r = 1; r < totalRowIdx; r++) {
+    for (let c = 0; c < N; c++) {
+      setStyle(r, c, NUM_COLS.has(cols[c]) ? XL_STYLE.cellR : XL_STYLE.cellL);
+    }
+  }
+  // Style footer TOTAL
+  for (let c = 0; c < N; c++) {
+    setStyle(totalRowIdx, c, NUM_COLS.has(cols[c]) ? XL_STYLE.footerR : XL_STYLE.footerL);
+  }
+
+  // Freeze header row (Excel akan menampilkannya saat scroll)
+  if (!ws["!freeze"]) {
+    ws["!freeze"] = { xSplit: 0, ySplit: 1 };
+  }
+
+  return ws;
+}
+
+function exportAll() {
+  if (!state.views || !state.records.length) return;
+  showLoading('Menyiapkan file Excel rapi (6 sheet)...');
+  setTimeout(() => {
+    try {
+      const wb = XLSX.utils.book_new();
+      const mapping = [
+        ["Data Detail", "detail"], ["Rekap Harian", "harian"],
+        ["Piutang Tempo", "piutang"], ["Cash Dropping", "dropping"],
+        ["Rekap Minyak & Rupa2", "minyak"], ["Data Bulanan", "bulanan"],
+      ];
+      for (const [name, key] of mapping) {
+        const ws = buildStyledSheet(key, state.views[key]);
+        XLSX.utils.book_append_sheet(wb, ws, name.slice(0, 31));
+      }
+      XLSX.writeFile(wb, buildExportFilename('Semua'));
+      hideLoading();
+      showToast('✅ Export 6 sheet rapi berhasil', 2500);
+    } catch (e) {
+      console.error(e);
+      hideLoading();
+      alert('Gagal export: ' + e.message);
+    }
+  }, 50);
+}
+
+function exportCurrentTab() {
+  if (!state.views || !state.records.length) return;
+  const info = TAB_EXPORT_MAP[currentTab];
+  if (!info) { showToast('Tab tidak dikenali', 2000); return; }
+
+  const rows = state.views[info.key];
+  if (!rows || !rows.length) {
+    showToast('⚠️ Tab "' + info.name + '" tidak punya data untuk diexport', 2800);
+    return;
+  }
+
+  showLoading('Menyiapkan file Excel rapi...');
+  setTimeout(() => {
+    try {
+      const wb = XLSX.utils.book_new();
+      const ws = buildStyledSheet(info.key, rows);
+      XLSX.utils.book_append_sheet(wb, ws, info.name.slice(0, 31));
+      const safeName = info.name.replace(/\s+/g, '_').replace(/[&]/g, 'n');
+      XLSX.writeFile(wb, buildExportFilename(safeName));
+      hideLoading();
+      showToast(`✅ Export "${info.name}" berhasil (${rows.length.toLocaleString('id-ID')} baris)`, 2500);
+    } catch (e) {
+      console.error(e);
+      hideLoading();
+      alert('Gagal export: ' + e.message);
+    }
+  }, 50);
+}
+
+/* ===== MENU DROPDOWN ===== */
+const menuBtn = document.getElementById("menuBtn");
+const menuDropdown = document.getElementById("menuDropdown");
+
+menuBtn.addEventListener("click", (e) => {
+  e.stopPropagation();
+  menuDropdown.classList.toggle("open");
+});
+document.addEventListener("click", (e) => {
+  if (!menuDropdown.contains(e.target) && e.target !== menuBtn) {
+    menuDropdown.classList.remove("open");
+  }
+});
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape") {
+    menuDropdown.classList.remove("open");
+    closeDeleteModal();
+  }
+});
+
+function resetAllFilters() {
+  document.getElementById("fSearch").value = "";
+  document.getElementById("filterBulan").value = "";
+  document.getElementById("filterTanggal").value = "";
+  document.getElementById("filterSales").value = "";
+  refreshTanggalOptions(state.records);
+  renderAll();
+}
+
+/* ===== EVENTS ===== */
+document.getElementById("fileInput").addEventListener("change", e => {
+  const f = e.target.files[0];
+  if (f) processFile(f);
+});
+document.getElementById("fSearch").addEventListener("input", scheduleRender);
+document.getElementById("filterBulan").addEventListener("change", () => {
+  refreshTanggalOptions(state.records);
+  renderAll();
+});
+document.getElementById("filterTanggal").addEventListener("change", renderAll);
+document.getElementById("filterSales").addEventListener("change", renderAll);
+document.getElementById("btnResetBar").addEventListener("click", resetAllFilters);
+document.getElementById("btnResetMenu").addEventListener("click", () => {
+  resetAllFilters();
+  menuDropdown.classList.remove("open");
+});
+
+document.getElementById("menuNewUpload").addEventListener("click", () => {
+  menuDropdown.classList.remove("open");
+  confirmNewUpload();
+});
+document.getElementById("menuDeleteMonth").addEventListener("click", () => {
+  menuDropdown.classList.remove("open");
+  openDeleteModal();
+});
+
+document.getElementById("btnExportAll").addEventListener("click", () => {
+  menuDropdown.classList.remove("open");
+  exportAll();
+});
+document.getElementById("btnExportCurrent").addEventListener("click", () => {
+  menuDropdown.classList.remove("open");
+  exportCurrentTab();
+});
+
+document.getElementById('deleteModal').addEventListener('click', (e) => {
+  if (e.target.id === 'deleteModal') closeDeleteModal();
+});
+
+/* ===== INIT ===== */
+renderTabs();
+
+(async function init() {
+  console.log('[app] init, DB:', IDB_NAME, '/', IDB_STORE);
+  if (indexedDB.databases) {
+    try {
+      const list = await indexedDB.databases();
+      console.log('[idb] DB di origin ini:',
+        list.map(d => `${d.name} (v${d.version})`).join(', ') || '(kosong)');
+    } catch(e) { /* ignore */ }
+  }
+  await tryAutoLoad();
+})();
+</script>
+
+</body>
+</html>
