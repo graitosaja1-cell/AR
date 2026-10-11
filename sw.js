@@ -1,7 +1,7 @@
 /* Service worker — Laporan PWA. Naikkan nomor VERSI bila ingin memaksa cache lama dibuang. */
-const VERSI = 'laporan-v1';
-const INTI = ['./', 'index.html', 'manifest.webmanifest', 'icons/icon-192.png', 'icons/icon-512.png'];
-const HOST_LUAR = /(^|\.)jsdelivr\.net$|^fonts\.googleapis\.com$|^fonts\.gstatic\.com$/;
+const VERSI = 'laporan-v2';
+const INTI = ['./', 'index.html', 'STOK-FITRI.html', 'manifest.webmanifest', 'icons/icon-192.png', 'icons/icon-512.png'];
+const HOST_LUAR = /(^|\.)jsdelivr\.net$|^cdnjs\.cloudflare\.com$|^fonts\.googleapis\.com$|^fonts\.gstatic\.com$/;
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(VERSI).then(c => c.addAll(INTI)).then(() => self.skipWaiting()));
@@ -17,10 +17,12 @@ self.addEventListener('fetch', e => {
   const u = new URL(req.url);
   /* Halaman utama: ambil versi terbaru dari jaringan, cadangan dari cache bila offline */
   if (req.mode === 'navigate') {
+    /* index.html disimpan dengan kunci 'index.html'; halaman lain (mis. STOK-FITRI.html di dalam iframe) pakai URL-nya sendiri */
+    const kunci = /(^|\/)(index\.html)?$/.test(u.pathname) ? 'index.html' : req;
     e.respondWith(fetch(req).then(res => {
-      if (res && res.ok) { const salin = res.clone(); caches.open(VERSI).then(c => c.put('index.html', salin)); }
+      if (res && res.ok) { const salin = res.clone(); caches.open(VERSI).then(c => c.put(kunci, salin)); }
       return res;
-    }).catch(() => caches.match('index.html', { ignoreSearch: true })));
+    }).catch(() => caches.match(kunci, { ignoreSearch: true })));
     return;
   }
   /* File sendiri + pustaka CDN (XLSX, font): pakai cache dulu, perbarui di belakang layar */
