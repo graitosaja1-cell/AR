@@ -1,10 +1,13 @@
 /* Service worker — Laporan PWA. Naikkan nomor VERSI bila ingin memaksa cache lama dibuang. */
-const VERSI = 'laporan-v2';
+const VERSI = 'laporan-v3';
 const INTI = ['./', 'index.html', 'STOK-FITRI.html', 'manifest.webmanifest', 'icons/icon-192.png', 'icons/icon-512.png'];
 const HOST_LUAR = /(^|\.)jsdelivr\.net$|^cdnjs\.cloudflare\.com$|^fonts\.googleapis\.com$|^fonts\.gstatic\.com$/;
 
 self.addEventListener('install', e => {
-  e.waitUntil(caches.open(VERSI).then(c => c.addAll(INTI)).then(() => self.skipWaiting()));
+  /* Satu file gagal / tidak ada TIDAK boleh membatalkan seluruh instalasi (addAll bersifat semua-atau-tidak) */
+  e.waitUntil(caches.open(VERSI)
+    .then(c => Promise.all(INTI.map(u => c.add(new Request(u, { cache: 'reload' })).catch(() => {}))))
+    .then(() => self.skipWaiting()));
 });
 self.addEventListener('activate', e => {
   e.waitUntil(caches.keys()
@@ -19,7 +22,8 @@ self.addEventListener('fetch', e => {
   if (req.mode === 'navigate') {
     /* index.html disimpan dengan kunci 'index.html'; halaman lain (mis. STOK-FITRI.html di dalam iframe) pakai URL-nya sendiri */
     const kunci = /(^|\/)(index\.html)?$/.test(u.pathname) ? 'index.html' : req;
-    e.respondWith(fetch(req).then(res => {
+    /* cache:'no-store' = lewati cache HTTP browser (GitHub Pages menyimpan ±10 menit), supaya versi terbaru langsung terlihat */
+    e.respondWith(fetch(req, { cache: 'no-store' }).then(res => {
       if (res && res.ok) { const salin = res.clone(); caches.open(VERSI).then(c => c.put(kunci, salin)); }
       return res;
     }).catch(() => caches.match(kunci, { ignoreSearch: true })));
