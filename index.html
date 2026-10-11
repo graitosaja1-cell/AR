@@ -14,6 +14,9 @@
 <link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
 <link rel="icon" type="image/png" sizes="16x16" href="icons/favicon-16.png">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700&display=swap" rel="stylesheet">
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
   html, body { height: 100%; }
@@ -70,22 +73,26 @@
   .hb-t{display:flex;align-items:center;gap:6px;color:var(--pr);justify-content:space-between}
   :root[data-theme=dark] .hb-t{color:#58a6ff}
   .hb-go{margin-top:12px;text-align:center}
-  /* ===== POPUP "Tunggu Sebentar" (device baru: menutup layar upload selama data server diambil) ===== */
-  .ld-ov{display:none;position:fixed;inset:0;z-index:100002;background:#0d1117;align-items:center;justify-content:center;padding:20px}
+  /* ===== POPUP "Tunggu Sebentar" (gaya futuristik) ===== */
+  .ld-ov{display:none;position:fixed;inset:0;z-index:100002;background:#111317;align-items:center;justify-content:center;padding:20px}
   .ld-ov.show{display:flex}
-  :root[data-theme="light"] .ld-ov{background:#f0f2f5}
-  .ld-box{width:min(100%,360px);text-align:center;background:#161b22;color:#e6edf3;border:1px solid #30363d;border-radius:14px;padding:30px 24px;box-shadow:0 12px 40px rgba(0,0,0,.45);font-family:'Segoe UI',Arial,sans-serif}
-  :root[data-theme="light"] .ld-box{background:#fff;color:#1e293b;border-color:#d6dde8}
-  .ld-sp{width:46px;height:46px;margin:0 auto 16px;border:4px solid rgba(88,166,255,.25);border-top-color:#58a6ff;border-radius:50%;animation:ldspin .8s linear infinite}
+  .ld-box{width:min(100%,420px);text-align:center;color:#4DB8FF;font-family:'Orbitron','Segoe UI',Arial,sans-serif}
+  .ld-sp{width:50px;height:50px;margin:0 auto 25px;border:4px solid rgba(0,191,255,.2);border-top-color:#00BFFF;border-radius:50%;box-shadow:0 0 15px rgba(0,191,255,.5);animation:ldspin 1s linear infinite}
   @keyframes ldspin{to{transform:rotate(360deg)}}
-  .ld-t{font-size:1.1rem;font-weight:700;margin-bottom:6px}
-  .ld-s{font-size:.84rem;color:#8b949e;line-height:1.5}
-  :root[data-theme="light"] .ld-s{color:#64748b}
-  .ld-btns{display:none;gap:8px;justify-content:center;margin-top:16px}
+  @keyframes ldblink{
+    0%,100%{opacity:1;text-shadow:0 0 10px rgba(0,255,255,.7),0 0 20px rgba(0,255,255,.5),0 0 40px rgba(0,255,255,.3)}
+    50%{opacity:.3;text-shadow:none}
+  }
+  .ld-t{color:#00FFFF;font-size:24px;font-weight:700;margin:0 0 10px;letter-spacing:2px;text-transform:uppercase;animation:ldblink 1.5s ease-in-out infinite}
+  .ld-s{color:#4DB8FF;font-size:14px;letter-spacing:1px;line-height:1.5;text-shadow:0 0 5px rgba(77,184,255,.5)}
+  .ld-btns{display:none;gap:10px;justify-content:center;margin-top:22px}
   .ld-box.fail .ld-btns{display:flex}
   .ld-box.fail .ld-sp{display:none}
-  .ld-btns button{padding:8px 16px;border-radius:8px;border:1px solid #30363d;background:transparent;color:inherit;font:600 .8rem 'Segoe UI',Arial,sans-serif;cursor:pointer}
-  .ld-btns button.p{background:#1f6feb;border-color:#1f6feb;color:#fff}
+  .ld-box.fail .ld-t{animation:none;color:#ff6b6b;text-shadow:0 0 10px rgba(255,107,107,.5)}
+  .ld-btns button{padding:9px 18px;border-radius:8px;border:1px solid #00BFFF;background:transparent;color:#00FFFF;font:700 .75rem 'Orbitron','Segoe UI',Arial,sans-serif;letter-spacing:1px;cursor:pointer}
+  .ld-btns button:hover{background:rgba(0,191,255,.15)}
+  .ld-btns button.p{background:#00BFFF;color:#111317}
+  @media (max-width:420px){.ld-t{font-size:19px}.ld-s{font-size:12px}}
   /* ===== LAYAR PIN ===== */
   .pin-ov{display:none;position:fixed;inset:0;z-index:100003;background:#0d1117;align-items:center;justify-content:center;padding:20px}
   .pin-ov.show{display:flex}
