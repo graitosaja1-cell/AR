@@ -70,9 +70,32 @@
   .hb-t{display:flex;align-items:center;gap:6px;color:var(--pr);justify-content:space-between}
   :root[data-theme=dark] .hb-t{color:#58a6ff}
   .hb-go{margin-top:12px;text-align:center}
+  /* ===== POPUP "Tunggu Sebentar" (device baru: menutup layar upload selama data server diambil) ===== */
+  .ld-ov{display:none;position:fixed;inset:0;z-index:100002;background:#0d1117;align-items:center;justify-content:center;padding:20px}
+  .ld-ov.show{display:flex}
+  :root[data-theme="light"] .ld-ov{background:#f0f2f5}
+  .ld-box{width:min(100%,360px);text-align:center;background:#161b22;color:#e6edf3;border:1px solid #30363d;border-radius:14px;padding:30px 24px;box-shadow:0 12px 40px rgba(0,0,0,.45);font-family:'Segoe UI',Arial,sans-serif}
+  :root[data-theme="light"] .ld-box{background:#fff;color:#1e293b;border-color:#d6dde8}
+  .ld-sp{width:46px;height:46px;margin:0 auto 16px;border:4px solid rgba(88,166,255,.25);border-top-color:#58a6ff;border-radius:50%;animation:ldspin .8s linear infinite}
+  @keyframes ldspin{to{transform:rotate(360deg)}}
+  .ld-t{font-size:1.1rem;font-weight:700;margin-bottom:6px}
+  .ld-s{font-size:.84rem;color:#8b949e;line-height:1.5}
+  :root[data-theme="light"] .ld-s{color:#64748b}
+  .ld-btns{display:none;gap:8px;justify-content:center;margin-top:16px}
+  .ld-box.fail .ld-btns{display:flex}
+  .ld-box.fail .ld-sp{display:none}
+  .ld-btns button{padding:8px 16px;border-radius:8px;border:1px solid #30363d;background:transparent;color:inherit;font:600 .8rem 'Segoe UI',Arial,sans-serif;cursor:pointer}
+  .ld-btns button.p{background:#1f6feb;border-color:#1f6feb;color:#fff}
 </style>
 </head>
 <body>
+<div class="ld-ov" id="ldOv"><div class="ld-box" id="ldBox">
+  <div class="ld-sp"></div>
+  <div class="ld-t" id="ldTitle">Tunggu Sebentar...</div>
+  <div class="ld-s" id="ldTxt">Aplikasi sedang mengambil Data Server</div>
+  <div class="ld-btns"><button type="button" class="p" id="ldRetry">Coba Lagi</button><button type="button" id="ldClose">Tutup</button></div>
+</div></div>
+<script>document.getElementById('ldOv').classList.add('show')</script>
 <div class="main-tabs">
   <button class="main-tab active" data-tab="penjualan">📈 Penjualan</button>
   <button class="main-tab" data-tab="uangmasuk">💰 Uang Masuk</button>
@@ -404,7 +427,7 @@ async function download(silent) {
   if (!rows || rows.length !== m.n) throw new Error('Data cloud belum lengkap, coba lagi.');
   const o = await unpack(await unseal(await unb64(rows.map(r => r.data).join('')), code));
   if (!silent && !confirm(`Ambil data dari cloud (${fmtT(m.ver)})?\n\n${sum(o)}\n\nData di device ini akan DITIMPA.`)) return msg('Dibatalkan.');
-  await apply(o); LS.setItem('syncLast', m.ver); LS.setItem('syncHash', await hashOf(await snap())); LS.setItem('syncHashV', '2'); msg('✅ Selesai. Memuat ulang...'); setTimeout(() => location.reload(), 700);
+  await apply(o); LS.setItem('syncLast', m.ver); LS.setItem('syncHash', await hashOf(await snap())); LS.setItem('syncHashV', '2'); RELOADING = true; ldShow('Data diterima, memuat ulang...'); msg('✅ Selesai. Memuat ulang...'); setTimeout(() => location.reload(), 700);
 }
 
 /* salinan pengaman: data lokal disimpan dulu sebelum ditimpa data cloud */
@@ -510,6 +533,7 @@ async function runSync(trigger) {
     const cc = cnt(o), empty = !cc.p && !cc.u && !cc.a && !cc.h && !cc.k;
     const dirty = lh ? h !== lh : !empty;
     let act = decide(m, ll, dirty, empty, load);
+    if (empty && m && load) act = 'down';   /* device kosong & cloud punya data: langsung ambil, tidak perlu tanya */
     if (act === 'conflict' && autoPaused) act = 'warn';
     if (act === 'up') await autoUp();
     else if (act === 'down') await autoDown();
@@ -528,8 +552,10 @@ async function runSync(trigger) {
     if (t === 'TABEL_BELUM_ADA') pill('⚠️ Tabel Supabase belum dibuat', 'err');
     else if (e instanceof TypeError || /fetch|network/i.test(t)) pill('📴 Offline, sinkron ditunda', 'warn');
     else pill('⚠️ Sinkron gagal: ' + t.slice(0, 80), 'err');
+    ldFail(t === 'TABEL_BELUM_ADA' ? 'Tabel server belum dibuat.' : (e instanceof TypeError || /fetch|network/i.test(t)) ? 'Tidak dapat terhubung ke server. Periksa koneksi internet.' : 'Gagal mengambil data server.');
   } finally {
     syncing = false;
+    if (!RELOADING && !ldFailed) ldHide();
     if (pendingChg) { pendingChg = false; onChange(); }
   }
 }
@@ -545,7 +571,26 @@ document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'hidden') { if (chgTimer) { clearTimeout(chgTimer); chgTimer = null; runSync('change'); } }
   else if (Date.now() - lastCheck > 60000) runSync('visible');
 });
-setTimeout(() => runSync('start'), 1200);
+/* ---------- POPUP "Tunggu Sebentar" ---------- */
+const LD = document.getElementById('ldOv');
+let RELOADING = false, ldFailed = false, ldT = null;
+function ldShow(t) { if (!LD) return; if (t) $('#ldTxt').textContent = t; LD.classList.add('show'); }
+function ldHide() { if (LD) LD.classList.remove('show'); clearTimeout(ldT); }
+function ldFail(t) {
+  if (!LD || !LD.classList.contains('show')) return;
+  ldFailed = true; clearTimeout(ldT);
+  $('#ldBox').classList.add('fail'); $('#ldTitle').textContent = 'Gagal Mengambil Data'; $('#ldTxt').textContent = t;
+}
+$('#ldClose').addEventListener('click', () => { ldFailed = false; ldHide(); });
+$('#ldRetry').addEventListener('click', () => {
+  ldFailed = false; $('#ldBox').classList.remove('fail'); $('#ldTitle').textContent = 'Tunggu Sebentar...';
+  $('#ldTxt').textContent = 'Aplikasi sedang mengambil Data Server'; ldShow(); runSync('start');
+});
+/* Popup tampil sejak awal; langsung ditutup bila device ini ternyata sudah punya data lokal */
+ldShow();
+ldT = setTimeout(() => { if (!RELOADING) ldFail('Server terlalu lama merespons.'); }, 60000);   /* pengaman: jangan menggantung selamanya */
+snap().then(o => { const c = cnt(o); if (c.p || c.u || c.a || c.h || c.k) ldHide(); else setTimeout(() => { if (!syncing && !RELOADING && !ldFailed && !LS.getItem('syncLast')) runSync('start'); }, 4000); }).catch(() => ldHide());
+setTimeout(() => runSync('start'), 600);
 
 /* ---------- UI ---------- */
 function msg(t, err) {
