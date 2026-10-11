@@ -260,6 +260,7 @@ $('#hbGo').addEventListener('click', () => {
 <button class="bk-b" data-a="bkFile">⬇️ Unduh File Backup (manual)</button>
 <button class="bk-b" data-a="rsDrive" data-dir>♻️ Restore dari Folder Google Drive</button>
 <button class="bk-b" data-a="rsFile">📁 Restore dari File Backup...</button>
+<button class="bk-b" data-a="rsSafety">↩️ Kembalikan data lokal sebelum sinkron terakhir</button>
 <div class="mu">Backup mencakup: Rekap Penjualan, Rekap Uang Masuk, data AR, Hutang Dagang (HD), Neraca, Stok Fitri, tindakan manual tab Cek, dan faktur Batal di tab Penjualan. Gunakan "Restore" jika terjadi error atau data hilang.</div>
 <hr class="bk-hr">
 <h3>☁️ Sync Antar-Device (Cloud)</h3>
@@ -393,7 +394,7 @@ async function upload() {
   }
   await sb('laporan_sync', { method: 'POST', headers: { Prefer: 'return=minimal' }, body: JSON.stringify([{ ns, ver, part: -1, data: JSON.stringify({ n, at: ver }) }]) });
   await sb(`laporan_sync?ns=eq.${ns}&ver=lt.${encodeURIComponent(ver)}`, { method: 'DELETE' }).catch(() => {});
-  LS.setItem('syncLast', ver); LS.setItem('syncHash', await hashOf(o)); autoPaused = false; msg('✅ Upload ke cloud berhasil.\n' + sum(o));
+  LS.setItem('syncLast', ver); LS.setItem('syncHash', await hashOf(o)); LS.setItem('syncHashV', '2'); autoPaused = false; msg('✅ Upload ke cloud berhasil.\n' + sum(o));
 }
 async function download(silent) {
   const code = getCode(), m = await cloudMeta(code);
@@ -403,8 +404,12 @@ async function download(silent) {
   if (!rows || rows.length !== m.n) throw new Error('Data cloud belum lengkap, coba lagi.');
   const o = await unpack(await unseal(await unb64(rows.map(r => r.data).join('')), code));
   if (!silent && !confirm(`Ambil data dari cloud (${fmtT(m.ver)})?\n\n${sum(o)}\n\nData di device ini akan DITIMPA.`)) return msg('Dibatalkan.');
-  await apply(o); LS.setItem('syncLast', m.ver); LS.setItem('syncHash', await hashOf(await snap())); msg('✅ Selesai. Memuat ulang...'); setTimeout(() => location.reload(), 700);
+  await apply(o); LS.setItem('syncLast', m.ver); LS.setItem('syncHash', await hashOf(await snap())); LS.setItem('syncHashV', '2'); msg('✅ Selesai. Memuat ulang...'); setTimeout(() => location.reload(), 700);
 }
+
+/* salinan pengaman: data lokal disimpan dulu sebelum ditimpa data cloud */
+async function saveSafety(o) { const db = await idb('laporan-sync-safety', 's'), t = db.transaction('s', 'readwrite'); t.objectStore('s').put({ at: Date.now(), o }, 'last'); await txd(t); db.close(); }
+async function loadSafety() { const db = await idb('laporan-sync-safety', 's'), r = await rq(db.transaction('s').objectStore('s').get('last')); db.close(); return r || null; }
 
 /* ---------- aksi backup ---------- */
 async function restoreFrom(bytes, label) {
@@ -437,6 +442,11 @@ const A = {
     await restoreFrom(new Uint8Array(await f.arrayBuffer()), 'folder Google Drive');
   },
   rsFile() { $('#bkFile').value = ''; $('#bkFile').click(); },
+  async rsSafety() {
+    const s = await loadSafety(); if (!s) throw new Error('Belum ada salinan pengaman data lokal.');
+    if (!confirm(`Kembalikan data lokal yang disimpan otomatis sebelum sinkron (${fmtT(s.at)})?\n\n${sum(s.o)}\n\nData di device ini akan DITIMPA.`)) return msg('Dibatalkan.');
+    await apply(s.o); LS.setItem('syncHashV', '0'); msg('✅ Dikembalikan. Memuat ulang...'); setTimeout(() => location.reload(), 700);
+  },
   up: upload, down: download
 };
 
@@ -450,9 +460,10 @@ try { LS.removeItem('autoSync'); } catch (e) {}
 const autoOn = () => true;
 let syncing = false, autoPaused = false, pendingChg = false, chgTimer = null, pillT = null, lastCheck = 0;
 const hhmm = () => new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+const encH = o => JSON.stringify(o, function (k, v) { if (k === 'savedAt' || k === 'ts') return undefined; const x = this[k]; return x instanceof Date ? { $d: isNaN(x) ? null : x.getTime() } : v; });
 async function hashOf(o) {
   const c = { ...o }; delete c.at;
-  const d = new Uint8Array(await crypto.subtle.digest('SHA-256', utf8(enc(c))));
+  const d = new Uint8Array(await crypto.subtle.digest('SHA-256', utf8(encH(c))));
   return [...d].slice(0, 16).map(x => x.toString(16).padStart(2, '0')).join('');
 }
 function decide(m, ll, dirty, empty, load) {
@@ -494,7 +505,7 @@ async function runSync(trigger) {
   try {
     pill('⏳ Mengecek sinkron...', 'busy');
     const m = await cloudMeta(SYNC_CODE);
-    const o = await snap(), h = await hashOf(o), lh = LS.getItem('syncHash'), ll = LS.getItem('syncLast');
+    const o = await snap(), h = await hashOf(o), lh = LS.getItem('syncHashV') === '2' ? LS.getItem('syncHash') : null, ll = LS.getItem('syncLast');
     /* device baru: tab Neraca bisa menyimpan periode kosong otomatis, jadi hanya hitung data transaksi */
     const cc = cnt(o), empty = !cc.p && !cc.u && !cc.a && !cc.h && !cc.k;
     const dirty = lh ? h !== lh : !empty;
@@ -503,8 +514,9 @@ async function runSync(trigger) {
     if (act === 'up') await autoUp();
     else if (act === 'down') await autoDown();
     else if (act === 'conflict') {
-      if (confirm('Data di cloud lebih baru (' + fmtT(m.ver) + '), tetapi device ini juga punya perubahan yang belum terkirim.\n\nOK = Ambil data cloud (data device ini DITIMPA)\nBatal = pilihan lain')) await autoDown();
-      else if (confirm('Timpa data CLOUD dengan data device ini?\n\nOK = Upload (data cloud DITIMPA)\nBatal = jangan lakukan apa-apa (sinkron otomatis dijeda sampai halaman dimuat ulang)')) await autoUp();
+      /* Selalu pakai data cloud terbaru; data lokal yang belum terkirim disalin dulu sebagai pengaman */
+      let safe = true; try { await saveSafety(o); } catch (e) { safe = false; }
+      if (safe || confirm('Data di cloud lebih baru (' + fmtT(m.ver) + ') dan salinan pengaman data lokal gagal dibuat.\n\nOK = Ambil data cloud (data device ini DITIMPA)\nBatal = jangan lakukan apa-apa')) await autoDown();
       else { autoPaused = true; pill('⏸ Sinkron otomatis dijeda (ada konflik)', 'warn'); }
     }
     else if (act === 'warn') { autoPaused = true; pill('⚠️ Konflik: cloud & device sama-sama berubah. Buka Backup/Sync', 'warn'); }
