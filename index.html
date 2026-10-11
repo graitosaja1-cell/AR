@@ -579,7 +579,10 @@ function ldHide() { if (LD) LD.classList.remove('show'); clearTimeout(ldT); }
 function ldFail(t) {
   if (!LD || !LD.classList.contains('show')) return;
   ldFailed = true; clearTimeout(ldT);
-  $('#ldBox').classList.add('fail'); $('#ldTitle').textContent = 'Gagal Mengambil Data'; $('#ldTxt').textContent = t;
+  snap().then(o => {
+    if (cnt(o).p) { ldFailed = false; ldHide(); return; }      /* data Penjualan sudah ada di device ini: pakai data lokal */
+    $('#ldBox').classList.add('fail'); $('#ldTitle').textContent = 'Gagal Mengambil Data'; $('#ldTxt').textContent = t;
+  }).catch(() => { ldFailed = false; ldHide(); });
 }
 $('#ldClose').addEventListener('click', () => { ldFailed = false; ldHide(); });
 $('#ldRetry').addEventListener('click', () => {
@@ -589,8 +592,7 @@ $('#ldRetry').addEventListener('click', () => {
 /* Popup tampil sejak awal; langsung ditutup bila device ini ternyata sudah punya data lokal */
 ldShow();
 ldT = setTimeout(() => { if (!RELOADING) ldFail('Server terlalu lama merespons.'); }, 60000);   /* pengaman: jangan menggantung selamanya */
-snap().then(o => { const c = cnt(o); if (c.p || c.u || c.a || c.h || c.k) ldHide(); else setTimeout(() => { if (!syncing && !RELOADING && !ldFailed && !LS.getItem('syncLast')) runSync('start'); }, 4000); }).catch(() => ldHide());
-setTimeout(() => runSync('start'), 600);
+setTimeout(() => runSync('start'), 300);
 
 /* ---------- UI ---------- */
 function msg(t, err) {
