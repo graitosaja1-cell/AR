@@ -86,6 +86,24 @@
   .ld-box.fail .ld-sp{display:none}
   .ld-btns button{padding:8px 16px;border-radius:8px;border:1px solid #30363d;background:transparent;color:inherit;font:600 .8rem 'Segoe UI',Arial,sans-serif;cursor:pointer}
   .ld-btns button.p{background:#1f6feb;border-color:#1f6feb;color:#fff}
+  /* ===== LAYAR PIN ===== */
+  .pin-ov{display:none;position:fixed;inset:0;z-index:100003;background:#0d1117;align-items:center;justify-content:center;padding:20px}
+  .pin-ov.show{display:flex}
+  :root[data-theme="light"] .pin-ov{background:#f0f2f5}
+  .pin-box{width:min(100%,320px);text-align:center;background:#161b22;color:#e6edf3;border:1px solid #30363d;border-radius:14px;padding:26px 22px 20px;box-shadow:0 12px 40px rgba(0,0,0,.45);font-family:'Segoe UI',Arial,sans-serif}
+  :root[data-theme="light"] .pin-box{background:#fff;color:#1e293b;border-color:#d6dde8}
+  .pin-box.shake{animation:pinshake .35s}
+  @keyframes pinshake{20%,60%{transform:translateX(-8px)}40%,80%{transform:translateX(8px)}}
+  .pin-t{font-size:1.05rem;font-weight:700;margin-bottom:4px}
+  .pin-s{font-size:.8rem;color:#8b949e;margin-bottom:16px}
+  :root[data-theme="light"] .pin-s{color:#64748b}
+  .pin-dots{display:flex;gap:12px;justify-content:center;margin-bottom:8px}
+  .pin-dots i{width:14px;height:14px;border-radius:50%;border:2px solid #58a6ff;background:transparent}
+  .pin-dots i.on{background:#58a6ff}
+  .pin-msg{min-height:18px;font-size:.78rem;color:#f85149;margin-bottom:10px}
+  .pin-pad{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+  .pin-pad button{height:50px;border-radius:10px;border:1px solid #30363d;background:transparent;color:inherit;font:600 1.15rem 'Segoe UI',Arial,sans-serif;cursor:pointer}
+  .pin-pad button:hover,.pin-pad button:active{background:rgba(88,166,255,.15)}
 </style>
 </head>
 <body>
@@ -95,7 +113,19 @@
   <div class="ld-s" id="ldTxt">Aplikasi sedang mengambil Data Server</div>
   <div class="ld-btns"><button type="button" class="p" id="ldRetry">Coba Lagi</button><button type="button" id="ldClose">Tutup</button></div>
 </div></div>
-<script>document.getElementById('ldOv').classList.add('show')</script>
+<div class="pin-ov" id="pinOv"><div class="pin-box" id="pinBox">
+  <div class="pin-t">🔒 Masukkan PIN</div>
+  <div class="pin-s">Data ini bersifat rahasia</div>
+  <div class="pin-dots" id="pinDots"><i></i><i></i><i></i><i></i></div>
+  <div class="pin-msg" id="pinMsg"></div>
+  <div class="pin-pad" id="pinPad">
+    <button type="button" data-k="1">1</button><button type="button" data-k="2">2</button><button type="button" data-k="3">3</button>
+    <button type="button" data-k="4">4</button><button type="button" data-k="5">5</button><button type="button" data-k="6">6</button>
+    <button type="button" data-k="7">7</button><button type="button" data-k="8">8</button><button type="button" data-k="9">9</button>
+    <span></span><button type="button" data-k="0">0</button><button type="button" data-k="del">⌫</button>
+  </div>
+</div></div>
+<script>(function(){var ok=false;try{ok=sessionStorage.getItem('pinOk')==='1'}catch(e){}document.getElementById(ok?'ldOv':'pinOv').classList.add('show')})()</script>
 <div class="main-tabs">
   <button class="main-tab active" data-tab="penjualan">📈 Penjualan</button>
   <button class="main-tab" data-tab="uangmasuk">💰 Uang Masuk</button>
@@ -522,7 +552,7 @@ async function autoDown() {
   try { await download(true); } finally { QUIET = false; }
 }
 async function runSync(trigger) {
-  if (syncing || !autoOn()) return;
+  if (syncing || !autoOn() || !PIN_OK) return;
   const load = trigger === 'start' || trigger === 'visible';
   syncing = true; lastCheck = Date.now();
   try {
@@ -590,9 +620,43 @@ $('#ldRetry').addEventListener('click', () => {
   $('#ldTxt').textContent = 'Aplikasi sedang mengambil Data Server'; ldShow(); runSync('start');
 });
 /* Popup tampil sejak awal; langsung ditutup bila device ini ternyata sudah punya data lokal */
-ldShow();
-ldT = setTimeout(() => { if (!RELOADING) ldFail('Server terlalu lama merespons.'); }, 60000);   /* pengaman: jangan menggantung selamanya */
-setTimeout(() => runSync('start'), 300);
+function startApp() {
+  ldShow();
+  ldT = setTimeout(() => { if (!RELOADING) ldFail('Server terlalu lama merespons.'); }, 60000);   /* pengaman: jangan menggantung selamanya */
+  setTimeout(() => runSync('start'), 300);
+}
+
+/* ---------- PIN ---------- */
+/* Hanya hash PIN yang disimpan di kode (bukan angkanya). Setelah benar, tidak ditanya lagi selama tab/sesi ini
+   (termasuk saat halaman reload otomatis setelah ambil data cloud). */
+const PIN_HASH = '2d5acd535221014178e7016a3073015b7821d5170ea00d3598b104708ba05596';
+let PIN_OK = false; try { PIN_OK = sessionStorage.getItem('pinOk') === '1'; } catch (e) {}
+let pinBuf = '', pinTries = 0, pinLock = 0;
+const PO = document.getElementById('pinOv');
+async function sha(t) { const d = new Uint8Array(await crypto.subtle.digest('SHA-256', utf8(t))); return [...d].map(x => x.toString(16).padStart(2, '0')).join(''); }
+function pinDraw() { document.querySelectorAll('#pinDots i').forEach((d, i) => d.classList.toggle('on', i < pinBuf.length)); }
+function pinMsg(t) { $('#pinMsg').textContent = t || ''; }
+async function pinSubmit() {
+  let h = ''; try { h = await sha('laporan-pin:' + pinBuf); } catch (e) {}
+  if (h && h === PIN_HASH) {
+    PIN_OK = true; try { sessionStorage.setItem('pinOk', '1'); } catch (e) {}
+    PO.classList.remove('show'); startApp(); return;
+  }
+  pinBuf = ''; pinDraw(); pinTries++;
+  const bx = $('#pinBox'); bx.classList.remove('shake'); void bx.offsetWidth; bx.classList.add('shake');
+  if (pinTries >= 5) { pinTries = 0; pinLock = Date.now() + 30000; pinMsg('Terlalu banyak salah. Coba lagi dalam 30 detik.'); }
+  else pinMsg('PIN salah');
+}
+function pinPress(k) {
+  if (PIN_OK) return;
+  if (Date.now() < pinLock) { pinMsg('Terkunci. Coba lagi dalam ' + Math.ceil((pinLock - Date.now()) / 1000) + ' detik.'); return; }
+  if (k === 'del') pinBuf = pinBuf.slice(0, -1); else if (/^\d$/.test(k) && pinBuf.length < 4) pinBuf += k;
+  pinDraw(); pinMsg('');
+  if (pinBuf.length === 4) pinSubmit();
+}
+$('#pinPad').addEventListener('click', e => { const b = e.target.closest('[data-k]'); if (b) pinPress(b.dataset.k); });
+document.addEventListener('keydown', e => { if (PIN_OK) return; if (/^\d$/.test(e.key)) pinPress(e.key); else if (e.key === 'Backspace') pinPress('del'); });
+if (PIN_OK) startApp();
 
 /* ---------- UI ---------- */
 function msg(t, err) {
