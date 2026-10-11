@@ -141,6 +141,7 @@
   <button class="main-tab" data-tab="hd">📦 HD</button>
   <button class="main-tab" data-tab="kaskecil">💵 Kas Kecil</button>
   <button class="main-tab" data-tab="stok">📦 Stok Fitri</button>
+  <button class="main-tab" data-tab="stoksfa">📊 Stok SFA</button>
   <button class="main-tab" data-tab="neraca">⚖️ Neraca</button>
   <button class="theme-btn" id="themeBtn" title="Ganti mode gelap / terang (semua tab)">☀️ Terang</button>
   <div class="mn-wrap">
@@ -160,6 +161,7 @@
   <iframe id="frame-hd" title="Hutang Dagang"></iframe>
   <iframe id="frame-kaskecil" title="Kas Kecil"></iframe>
   <iframe id="frame-stok" title="Stok Fitri"></iframe>
+  <iframe id="frame-stoksfa" title="Stok SFA"></iframe>
   <iframe id="frame-neraca" title="Neraca"></iframe>
 </div>
 <script>
@@ -167,6 +169,8 @@ const SRC = {"penjualan": "<!DOCTYPE html>\n<html lang=\"id\">\n<head>\n<meta ch
 for (const k of Object.keys(SRC)) document.getElementById('frame-' + k).srcdoc = SRC[k];
 /* Tab Stok Fitri = file HTML terpisah (STOK-FITRI.html, satu folder dengan index.html). Satu origin -> data & tema ikut terbagi. */
 document.getElementById('frame-stok').src = 'STOK-FITRI.html';
+/* Tab Stok SFA = file HTML terpisah (STOK-SFA.html, satu folder dengan index.html). Satu origin -> tema ikut terbagi. */
+document.getElementById('frame-stoksfa').src = 'STOK-SFA.html';
 
 function openTab(name) {
   document.querySelectorAll('.main-tab').forEach(t => t.classList.toggle('active', t.dataset.tab === name));
@@ -321,7 +325,7 @@ $('#hbGo').addEventListener('click', () => {
 <button class="bk-b" data-a="rsDrive" data-dir>♻️ Restore dari Folder Google Drive</button>
 <button class="bk-b" data-a="rsFile">📁 Restore dari File Backup...</button>
 <button class="bk-b" data-a="rsSafety">↩️ Kembalikan data lokal sebelum sinkron terakhir</button>
-<div class="mu">Backup mencakup: Rekap Penjualan, Rekap Uang Masuk, data AR, Hutang Dagang (HD), Neraca, Stok Fitri, tindakan manual tab Cek, dan faktur Batal di tab Penjualan. Gunakan "Restore" jika terjadi error atau data hilang.</div>
+<div class="mu">Backup mencakup: Rekap Penjualan, Rekap Uang Masuk, data AR, Hutang Dagang (HD), Neraca, Stok Fitri, Stok SFA, tindakan manual tab Cek, dan faktur Batal di tab Penjualan. Gunakan "Restore" jika terjadi error atau data hilang.</div>
 <hr class="bk-hr">
 <h3>☁️ Sync Antar-Device (Cloud)</h3>
 <div class="mu" id="syStat"></div>
@@ -364,6 +368,8 @@ const unb64 = async s => new Uint8Array(await (await fetch('data:application/oct
 /* ---------- snapshot / apply ---------- */
 async function snap() {
   const o = { v: 1, at: new Date().toISOString(), cekfix: LS.getItem('cekOverrides'), penjbatal: LS.getItem('penjBatal'), stok: { d: LS.getItem('stok_minyak_data_v1'), h: LS.getItem('stok_minyak_harga_v1') }, d: {} };
+  /* Stok SFA: hanya disertakan bila device ini punya data, supaya device tanpa data SFA tidak dianggap berubah */
+  { const sd = LS.getItem('gajahmas_stock_v1'), sn = LS.getItem('gajahmas_notes_checked_v1'); if (sd != null || sn != null) o.sfa = { d: sd, n: sn }; }
   for (const c of DBS) {
     const db = await idb(c.db, c.st, c.kp), s = db.transaction(c.st).objectStore(c.st);
     o.d[c.k] = await rq(c.kp ? s.getAll() : s.get('latest')); db.close();
@@ -380,6 +386,10 @@ async function apply(o) {
   }
   if (o.cekfix != null) LS.setItem('cekOverrides', o.cekfix);
   if (o.penjbatal != null) LS.setItem('penjBatal', o.penjbatal);
+  if (o.sfa) {                                              /* backup lama tanpa Stok SFA: biarkan data yang ada */
+    if (o.sfa.d != null) LS.setItem('gajahmas_stock_v1', o.sfa.d);
+    if (o.sfa.n != null) LS.setItem('gajahmas_notes_checked_v1', o.sfa.n);
+  }
   if (o.stok) {                                             /* backup lama tanpa Stok Fitri: biarkan data yang ada */
     if (o.stok.d != null) LS.setItem('stok_minyak_data_v1', o.stok.d);
     if (o.stok.h != null) LS.setItem('stok_minyak_harga_v1', o.stok.h);
@@ -394,10 +404,11 @@ function cnt(o) {
     h: n(d.hd, 'rows'),
     n: d.neraca && d.neraca.allData ? Object.keys(d.neraca.allData).length : 0,
     k: d.kaskecil ? (d.kaskecil.expenses || []).length + (d.kaskecil.kasbon || []).length : 0,
-    s: (() => { try { return Object.keys(JSON.parse((o.stok && o.stok.d) || '{}')).length; } catch (e) { return 0; } })()
+    s: (() => { try { return Object.keys(JSON.parse((o.stok && o.stok.d) || '{}')).length; } catch (e) { return 0; } })(),
+    f: (() => { try { return Object.keys(JSON.parse((o.sfa && o.sfa.d) || '{}')).length; } catch (e) { return 0; } })()
   };
 }
-const sum = o => { const c = cnt(o); return `Penjualan: ${c.p.toLocaleString('id-ID')} baris\nUang Masuk: ${c.u.toLocaleString('id-ID')} baris\nAR: ${c.a.toLocaleString('id-ID')} faktur\nHD: ${c.h.toLocaleString('id-ID')} baris\nNeraca: ${c.n.toLocaleString('id-ID')} periode\nKas Kecil: ${c.k.toLocaleString('id-ID')} baris\nStok Fitri: ${c.s.toLocaleString('id-ID')} bulan`; };
+const sum = o => { const c = cnt(o); return `Penjualan: ${c.p.toLocaleString('id-ID')} baris\nUang Masuk: ${c.u.toLocaleString('id-ID')} baris\nAR: ${c.a.toLocaleString('id-ID')} faktur\nHD: ${c.h.toLocaleString('id-ID')} baris\nNeraca: ${c.n.toLocaleString('id-ID')} periode\nKas Kecil: ${c.k.toLocaleString('id-ID')} baris\nStok Fitri: ${c.s.toLocaleString('id-ID')} bulan\nStok SFA: ${c.f.toLocaleString('id-ID')} bulan`; };
 const isEmpty = o => { const c = cnt(o); return !c.p && !c.u && !c.a && !c.h && !c.n && !c.k; };
 async function pack(o) { const u = utf8(enc(o)); return HAS_GZ ? pipe(u, CompressionStream) : u; }
 async function unpack(u) {
@@ -603,7 +614,7 @@ function onChange() {
 }
 A.auto = async function () { refreshAutoUI(); msg('🔄 Sinkron otomatis terkunci AKTIF dan tidak bisa dimatikan.'); };
 try { ['laporan-data', 'ar-piutang-sync', 'hd-hutang-sync', 'neraca-sync', 'kaskecil-sync'].forEach(n => { new BroadcastChannel(n).onmessage = onChange; }); } catch (e) {}
-window.addEventListener('storage', e => { if (['cekOverrides', 'penjBatal', 'stok_minyak_data_v1', 'stok_minyak_harga_v1'].includes(e.key)) onChange(); });
+window.addEventListener('storage', e => { if (['cekOverrides', 'penjBatal', 'stok_minyak_data_v1', 'stok_minyak_harga_v1', 'gajahmas_stock_v1', 'gajahmas_notes_checked_v1'].includes(e.key)) onChange(); });
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'hidden') { if (chgTimer) { clearTimeout(chgTimer); chgTimer = null; runSync('change'); } }
   else if (Date.now() - lastCheck > 60000) runSync('visible');

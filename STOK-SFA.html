@@ -1,0 +1,1270 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<script>try{document.documentElement.setAttribute('data-theme',localStorage.getItem('theme')||'dark')}catch(e){}</script>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Nilai Stock CV Gajah Mas</title>
+<script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+<style>
+  :root{
+    --green:#0f766e;
+    --green-dark:#065f46;
+    --blue:#0284c7;
+    --blue-dark:#075985;
+    --border:#e2e8f0;
+    --text:#1e293b;
+    --muted:#64748b;
+    --red:#dc2626;
+    --amber:#d97706;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{
+    font-family:'Segoe UI',Roboto,system-ui,-apple-system,sans-serif;
+    background:#eef2f6;color:var(--text);
+    display:flex;flex-direction:column;
+    height:100vh;height:100dvh;
+    overflow:hidden;
+  }
+
+  /* =========================================================
+     TOOLBAR
+     ========================================================= */
+  .toolbar{
+    flex:0 0 auto;
+    background:#fff;
+    border-bottom:1px solid var(--border);
+    box-shadow:0 1px 6px rgba(15,23,42,.08);
+    padding:4px 12px;
+    display:flex;
+    align-items:center;
+    gap:8px;
+    flex-wrap:wrap;
+    z-index:100;
+  }
+
+  .stats-inline{
+    display:flex;
+    gap:6px;
+    flex-wrap:wrap;
+    flex:1 1 auto;
+    min-width:0;
+  }
+  .card{
+    background:#fff;
+    border-radius:7px;
+    padding:4px 9px;
+    border:1px solid var(--border);
+    border-left:3px solid var(--green);
+    white-space:nowrap;
+    flex:1 1 0;
+    min-width:150px;
+    overflow:hidden;
+  }
+  .card .lbl{
+    font-size:9px;
+    text-transform:uppercase;
+    letter-spacing:.5px;
+    color:var(--muted);
+    font-weight:600;
+    line-height:1.1;
+  }
+  .card .val{
+    font-size:12.5px;
+    font-weight:400;
+    color:var(--green-dark);
+    margin-top:1px;
+    line-height:1.2;
+    font-variant-numeric:tabular-nums;
+  }
+  .card .sub{
+    font-size:9px;
+    color:var(--muted);
+    margin-top:1px;
+    line-height:1.1;
+  }
+  .card.fitri{border-left-color:var(--green)}
+  .card.fitri .val{color:var(--green-dark)}
+  .card.ruarupa{border-left-color:var(--blue)}
+  .card.ruarupa .val{color:var(--blue-dark)}
+  .card.total{border-left-color:var(--amber)}
+  .card.total .val{color:#b45309}
+
+  .controls{
+    display:flex;
+    align-items:center;
+    gap:5px;
+    flex-wrap:wrap;
+    margin-left:auto;
+    flex:0 0 auto;
+  }
+  .controls select,
+  .controls input[type=text]{
+    font-family:inherit;
+    font-size:11px;
+    padding:2px 7px;
+    border-radius:6px;
+    border:1px solid var(--border);
+    background:#fff;
+    color:var(--text);
+    outline:none;
+    cursor:pointer;
+    transition:.15s;
+    height:24px;
+    line-height:1;
+  }
+  .controls select{min-width:110px}
+  .controls input[type=text]{min-width:115px;cursor:text}
+  .controls input[type=text]::placeholder{color:#94a3b8}
+  .controls select:focus,
+  .controls input[type=text]:focus{
+    border-color:var(--green);
+    box-shadow:0 0 0 2px rgba(15,118,110,.12);
+  }
+
+  .btn-menu{
+    font-family:inherit;font-size:11px;font-weight:600;cursor:pointer;
+    padding:2px 10px;border-radius:6px;
+    border:1px solid var(--border);
+    background:#fff;color:#475569;
+    transition:.15s;white-space:nowrap;
+    display:inline-flex;align-items:center;gap:5px;height:24px;
+  }
+  .btn-menu:hover{background:#f1f5f9;border-color:#cbd5e1;color:var(--text)}
+
+  /* ---------- DROPDOWN MENU ---------- */
+  .menu-wrap{position:relative}
+  .dropdown{
+    position:absolute;right:0;top:calc(100% + 8px);
+    background:#fff;border-radius:12px;min-width:245px;
+    box-shadow:0 14px 40px rgba(15,23,42,.24);
+    border:1px solid var(--border);overflow:hidden;
+    display:none;z-index:300;animation:pop .14s ease-out;
+  }
+  @keyframes pop{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:translateY(0)}}
+  .dropdown.open{display:block}
+  .dropdown button{
+    display:flex;align-items:center;gap:11px;width:100%;
+    padding:11px 15px;background:none;border:none;cursor:pointer;
+    font-family:inherit;font-size:13px;color:var(--text);text-align:left;
+  }
+  .dropdown button:hover{background:#f1f5f9}
+  .dropdown button .ic{font-size:15px;width:20px;text-align:center}
+  .dropdown hr{border:none;border-top:1px solid var(--border);margin:4px 0}
+  .dropdown .danger{color:var(--red)}
+  .dropdown .danger:hover{background:#fef2f2}
+  .dropdown .hint{padding:8px 15px 10px;font-size:11px;color:var(--muted)}
+
+  /* ---------- LAYOUT ---------- */
+  .container{
+    flex:1 1 auto;
+    min-height:0;
+    overflow-y:auto;
+    overflow-x:hidden;
+    padding:12px 20px 16px;
+    width:100%;
+    max-width:1400px;
+    margin:0 auto;
+    display:flex;
+    flex-direction:column;
+  }
+  #content{
+    flex:1 1 auto;
+    min-height:0;
+    display:flex;
+    flex-direction:column;
+    gap:16px;
+  }
+
+  /* ---------- SECTION ---------- */
+  .section{
+    display:flex;
+    flex-direction:column;
+    flex:0 0 auto;
+    min-height:0;
+  }
+  .section:only-child{
+    flex:1 1 auto;
+  }
+
+  .section-head{
+    display:flex;align-items:center;gap:12px;
+    padding:8px 16px;border-radius:12px 12px 0 0;
+    color:#fff;font-weight:700;font-size:13.5px;letter-spacing:.4px;
+    flex:0 0 auto;
+    background:linear-gradient(90deg,#075985,#0ea5e9);
+  }
+  .section-head .badge{
+    font-size:11px;font-weight:600;opacity:.95;
+    background:rgba(255,255,255,.22);padding:3px 10px;border-radius:20px;
+    margin-left:auto;
+  }
+  .section-head .badge + .badge{margin-left:8px}
+
+  .table-wrap{
+    background:#fff;
+    border:1px solid var(--border);border-top:none;
+    border-radius:0 0 12px 12px;
+    box-shadow:0 1px 3px rgba(15,23,42,.06);
+    overflow:auto;
+    flex:1 1 auto;
+    min-height:150px;
+  }
+  .section:not(:only-child) .table-wrap{
+    max-height:55vh;
+  }
+
+  table{border-collapse:separate;border-spacing:0;width:100%;font-size:13.3px;min-width:920px}
+  thead th{
+    position:sticky;top:0;z-index:5;
+    background:#f1f5f9;color:#334155;font-weight:700;font-size:11px;
+    text-transform:uppercase;letter-spacing:.6px;
+    padding:9px 12px;text-align:left;white-space:nowrap;
+    border-bottom:1px solid var(--border);
+    box-shadow:inset 0 -1px 0 var(--border);
+  }
+  thead th.num{text-align:right}
+  thead th.center{text-align:center}
+  tbody td{padding:8px 12px;border-bottom:1px solid #f1f5f9;vertical-align:middle}
+  tbody td.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+  tbody td.center{text-align:center}
+  tbody tr:hover td{background:#f8fafc}
+  .col-no{width:48px;text-align:center;color:var(--muted)}
+  .nama{font-weight:600;color:#0f172a}
+
+  tr.subtotal td{
+    background:#f0f9ff;font-weight:700;color:var(--blue-dark);
+    border-top:2px solid #7dd3fc;border-bottom:none;
+  }
+
+  /* ---------- TABEL RINGKASAN BULANAN ---------- */
+  .section.summary .table-wrap{
+    max-height:none;
+  }
+  table.month-summary{
+    min-width:0;
+    font-size:13px;
+  }
+  table.month-summary thead th{
+    text-align:center;
+    padding:9px 10px;
+  }
+  table.month-summary thead th:first-child{
+    text-align:left;
+  }
+  table.month-summary tbody td{
+    padding:9px 10px;
+    border-bottom:1px solid #e2e8f0;
+  }
+  table.month-summary tbody td:first-child{
+    font-weight:700;
+    color:var(--blue-dark);
+    text-transform:uppercase;
+    letter-spacing:.3px;
+  }
+  table.month-summary tbody td.num{
+    text-align:right;
+    font-variant-numeric:tabular-nums;
+  }
+  table.month-summary tbody tr:hover td{
+    background:#f0f9ff;
+  }
+  table.month-summary tr.total-row td{
+    background:#f0f9ff;
+    font-weight:700;
+    color:var(--blue-dark);
+    border-top:2px solid #7dd3fc;
+    border-bottom:none;
+  }
+  table.month-summary tr.total-row td:first-child{
+    color:var(--blue-dark);
+  }
+
+  /* ---------- EMPTY ---------- */
+  .empty{
+    background:#fff;border:2px dashed #cbd5e1;border-radius:16px;
+    padding:60px 24px;text-align:center;color:var(--muted);
+    flex:1 1 auto;
+    display:flex;flex-direction:column;justify-content:center;align-items:center;
+  }
+  .empty .big{font-size:52px;margin-bottom:14px}
+  .empty h3{color:var(--text);font-size:17px;margin-bottom:8px}
+  .empty p{font-size:13.5px;line-height:1.7;max-width:470px;margin:0 auto}
+
+  /* ---------- TOAST ---------- */
+  #toast{position:fixed;left:50%;bottom:28px;transform:translateX(-50%) translateY(80px);
+    background:#0f172a;color:#fff;padding:12px 22px;border-radius:11px;font-size:13.5px;
+    box-shadow:0 10px 34px rgba(0,0,0,.3);opacity:0;transition:.3s;z-index:999;pointer-events:none;max-width:90vw;text-align:center}
+  #toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+  #toast.ok{background:#065f46}
+  #toast.err{background:#991b1b}
+
+
+  /* ---------- MODE GELAP (ikut tombol tema di index.html) ---------- */
+  :root[data-theme="dark"]{
+    color-scheme:dark;
+    --border:#30363d; --text:#e6edf3; --muted:#8b949e;
+    --green-dark:#56d364; --blue-dark:#58a6ff;
+  }
+  :root[data-theme="dark"] body{background:#0d1117;color:var(--text)}
+  :root[data-theme="dark"] .toolbar{background:#161b22;border-bottom-color:#30363d;box-shadow:none}
+  :root[data-theme="dark"] .card{background:#0d1117;border-color:#30363d}
+  :root[data-theme="dark"] .card.fitri .val{color:#56d364}
+  :root[data-theme="dark"] .card.ruarupa .val{color:#58a6ff}
+  :root[data-theme="dark"] .card.total .val{color:#f0b429}
+  :root[data-theme="dark"] .controls select,
+  :root[data-theme="dark"] .controls input[type=text],
+  :root[data-theme="dark"] .btn-menu{background:#0d1117;color:#e6edf3;border-color:#30363d}
+  :root[data-theme="dark"] .btn-menu:hover{background:#1c2128;color:#fff;border-color:#484f58}
+  :root[data-theme="dark"] .dropdown{background:#161b22;border-color:#30363d}
+  :root[data-theme="dark"] .dropdown button{color:#e6edf3}
+  :root[data-theme="dark"] .dropdown button:hover{background:#1c2128}
+  :root[data-theme="dark"] .dropdown .danger{color:#ff7b72}
+  :root[data-theme="dark"] .dropdown .danger:hover{background:#2a1618}
+  :root[data-theme="dark"] .section-head{background:linear-gradient(90deg,#14304f,#1f4e79)}
+  :root[data-theme="dark"] .table-wrap{background:#0d1117;border-color:#30363d;box-shadow:none}
+  :root[data-theme="dark"] thead th{background:#1f2937;color:#e6edf3;border-bottom-color:#30363d;box-shadow:inset 0 -1px 0 #30363d}
+  :root[data-theme="dark"] tbody td{border-bottom-color:#21262d}
+  :root[data-theme="dark"] tbody tr:hover td{background:#1c2128}
+  :root[data-theme="dark"] .nama{color:#e6edf3}
+  :root[data-theme="dark"] tr.subtotal td,
+  :root[data-theme="dark"] table.month-summary tr.total-row td{background:#12263d;color:#9ecbff;border-top-color:#2f6aa3}
+  :root[data-theme="dark"] table.month-summary tbody td{border-bottom-color:#21262d}
+  :root[data-theme="dark"] table.month-summary tbody tr:hover td{background:#1c2128}
+  :root[data-theme="dark"] .empty{background:#0d1117;border-color:#30363d}
+  :root[data-theme="dark"] .modal{background:#161b22;color:#e6edf3}
+  :root[data-theme="dark"] .modal h3{color:#e6edf3;border-bottom-color:#30363d}
+  :root[data-theme="dark"] .modal-body label{border-bottom-color:#21262d}
+  :root[data-theme="dark"] .modal-actions .btn-ghost{background:#0d1117;color:#e6edf3;border-color:#30363d}
+  :root[data-theme="dark"] .modal-actions .btn-ghost:hover{background:#1c2128}
+  :root[data-theme="dark"] .note-head{background:#1c2128}
+  :root[data-theme="dark"] .note-head .np{background:rgba(217,119,6,.18);color:#e0a85a}
+  :root[data-theme="dark"] .note-head .np.done{background:rgba(46,160,67,.18);color:#6fbf7f}
+  :root[data-theme="dark"] .note-item{border-top-color:#21262d}
+  :root[data-theme="dark"] .note-item ul{color:#a5b0bd}
+  :root[data-theme="dark"] .note-item td,
+  :root[data-theme="dark"] .note-item th{background:#0d1117 !important;color:#e6edf3 !important}
+  :root[data-theme="dark"] .note-item th{background:#1c2128 !important}
+
+  /* ---------- DROP OVERLAY ---------- */
+  #drop{position:fixed;inset:0;background:rgba(15,118,110,.88);z-index:900;display:none;
+    place-items:center;color:#fff;font-size:22px;font-weight:700;text-align:center;padding:20px}
+  #drop.on{display:grid}
+
+
+  /* ---------- CATATAN ---------- */
+  .notes-badge{margin-left:auto;background:#dc2626;color:#fff;font-size:10.5px;font-weight:700;
+    padding:1px 7px;border-radius:20px;display:none}
+  .notes-badge.on{display:inline-block}
+  #notesModal .modal{max-width:640px}
+  #notesModal .modal-body{max-height:68vh;padding:14px 20px 18px}
+  .note-entry{border:1px solid var(--border);border-radius:11px;margin-bottom:14px;overflow:hidden}
+  .note-head{background:#f1f5f9;padding:9px 14px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+  .note-head .nt{font-weight:700;font-size:13.5px;color:var(--text)}
+  .note-head .nd{font-size:11.5px;color:var(--muted);margin-left:auto}
+  .note-head .np{font-size:11px;font-weight:700;color:#b45309;background:#fef3c7;padding:2px 9px;border-radius:20px}
+  .note-head .np.done{color:#065f46;background:#d1fae5}
+  .note-intro{padding:9px 14px 0;font-size:12.5px;color:var(--muted)}
+  .note-item{display:flex;gap:10px;padding:10px 14px;border-top:1px solid #f1f5f9;font-size:13px;line-height:1.5;cursor:pointer}
+  .note-item:first-of-type{border-top:none}
+  .note-item input{width:16px;height:16px;margin-top:2px;accent-color:var(--green);flex:0 0 auto;cursor:pointer}
+  .note-item.done .nbody{opacity:.5;text-decoration:line-through}
+  .note-item b{color:var(--text)}
+  .note-item ul{margin:4px 0 0 16px;font-size:12.5px;color:#475569}
+  .note-item table{border-collapse:collapse;margin-top:6px;font-size:12px;min-width:0;width:auto}
+  .note-item td,.note-item th{border:1px solid var(--border);padding:3px 9px;text-align:right;position:static;background:#fff;font-size:12px;text-transform:none;letter-spacing:0}
+  .note-item th{background:#f8fafc;font-weight:600}
+  .note-item td:first-child,.note-item th:first-child{text-align:left}
+
+  /* ---------- MODAL EXPORT ---------- */
+  .modal-overlay{
+    position:fixed;inset:0;background:rgba(15,23,42,.55);
+    z-index:1100;display:none;
+    align-items:center;justify-content:center;padding:20px;
+    animation:fade .15s ease-out;
+  }
+  @keyframes fade{from{opacity:0}to{opacity:1}}
+  .modal-overlay.on{display:flex}
+  .modal{
+    background:#fff;border-radius:14px;
+    max-width:420px;width:100%;
+    box-shadow:0 20px 60px rgba(0,0,0,.35);
+    overflow:hidden;
+    animation:pop2 .18s ease-out;
+  }
+  @keyframes pop2{from{opacity:0;transform:translateY(-10px) scale(.97)}to{opacity:1;transform:translateY(0) scale(1)}}
+  .modal h3{
+    padding:16px 20px;border-bottom:1px solid var(--border);
+    font-size:15px;color:var(--text);
+    display:flex;align-items:center;gap:10px;
+  }
+  .modal-body{padding:12px 20px;max-height:50vh;overflow-y:auto}
+  .modal-body label{
+    display:flex;align-items:center;gap:10px;
+    padding:9px 4px;cursor:pointer;font-size:13.5px;
+    border-bottom:1px solid #f1f5f9;
+    transition:.12s;
+  }
+  .modal-body label:last-child{border-bottom:none}
+  .modal-body label:hover{color:var(--blue-dark)}
+  .modal-body input[type=checkbox]{
+    width:16px;height:16px;accent-color:var(--blue);cursor:pointer;flex:0 0 auto;
+  }
+  .select-all{
+    display:flex;justify-content:space-between;align-items:center;
+    padding:0 20px 10px;margin-top:4px;
+    font-size:11.5px;color:var(--muted);
+  }
+  .select-all button{
+    background:none;border:none;cursor:pointer;
+    color:var(--blue);font-weight:600;font-size:11.5px;font-family:inherit;
+    padding:2px 4px;
+  }
+  .select-all button:hover{text-decoration:underline}
+  .modal-actions{
+    padding:12px 20px;border-top:1px solid var(--border);
+    display:flex;gap:8px;justify-content:flex-end;background:#f8fafc;
+  }
+  .modal-actions button{
+    font-family:inherit;font-size:12.5px;font-weight:600;
+    padding:7px 16px;border-radius:8px;cursor:pointer;
+    border:1px solid var(--border);transition:.15s;
+  }
+  .modal-actions .btn-ghost{background:#fff;color:var(--text)}
+  .modal-actions .btn-ghost:hover{background:#f1f5f9;border-color:#cbd5e1}
+  .modal-actions .btn-primary{background:var(--blue);color:#fff;border-color:var(--blue)}
+  .modal-actions .btn-primary:hover{background:var(--blue-dark);border-color:var(--blue-dark)}
+
+  /* ---------- RESPONSIVE ---------- */
+  @media (max-width:900px){
+    .controls{width:100%;margin-left:0}
+    .controls select,
+    .controls input[type=text]{flex:1;min-width:0}
+    .menu-wrap{margin-left:auto}
+  }
+  @media (max-width:720px){
+    .card .val{font-size:12px}
+    .card{min-width:120px}
+    table.month-summary{font-size:11.5px}
+    table.month-summary thead th,
+    table.month-summary tbody td{padding:6px 6px}
+  }
+</style>
+</head>
+<body>
+
+<header class="toolbar">
+  <div class="stats-inline" id="stats"></div>
+
+  <div class="controls">
+    <select id="monthFilter"></select>
+
+    <select id="categoryFilter">
+      <option value="ALL">Semua Kategori</option>
+      <option value="Fitri">Fitri</option>
+      <option value="Rua Rupa">Rua Rupa</option>
+    </select>
+
+    <input type="text" id="searchInput" placeholder="Cari barang..." />
+
+    <div class="menu-wrap">
+      <button class="btn-menu" id="menuBtn">☰ Menu</button>
+      <div class="dropdown" id="menuDropdown">
+        <button data-act="upload"><span class="ic">📤</span> Upload Excel</button>
+        <button data-act="save"><span class="ic">💾</span> Simpan ke Excel</button>
+        <button data-act="notes"><span class="ic">📝</span> Catatan <span class="notes-badge" id="notesBadge"></span></button>
+        <hr>
+        <button data-act="delete" class="danger"><span class="ic">🗑️</span> Hapus Data Bulan Ini</button>
+        <button data-act="deleteAll" class="danger"><span class="ic">❌</span> Hapus Semua Data</button>
+        <div class="hint">Data tersimpan otomatis di browser</div>
+      </div>
+    </div>
+  </div>
+</header>
+
+<input type="file" id="fileInput" accept=".xlsx,.xls,.csv" multiple hidden />
+<div id="drop">📂 Lepaskan file Excel di sini</div>
+
+<main class="container">
+  <section id="content"></section>
+</main>
+
+<div class="modal-overlay" id="exportModal">
+  <div class="modal">
+    <h3>💾 Simpan ke Excel</h3>
+    <div class="modal-body" id="exportList"></div>
+    <div class="select-all">
+      <span>Pilih bulan yang ingin disimpan</span>
+      <button id="toggleAll" type="button">Pilih Semua</button>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-ghost" id="exportCancel" type="button">Batal</button>
+      <button class="btn-primary" id="exportConfirm" type="button">Simpan</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="notesModal">
+  <div class="modal">
+    <h3>📝 Catatan Data <span style="margin-left:auto;font-size:12px;font-weight:400;color:var(--muted)">Centang jika sudah dicek</span></h3>
+    <div class="modal-body" id="notesBody"></div>
+    <div class="modal-actions">
+      <button class="btn-primary" id="notesClose" type="button">Tutup</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+/* =========================================================
+   KONFIGURASI & STATE
+   ========================================================= */
+const LS_KEY = 'gajahmas_stock_v1';
+const CATEGORIES = ['Fitri', 'Rua Rupa'];
+const SUFFIX = '(SFA stok Akhir Bulan)';
+const MONTH_NAMES = ['januari','februari','maret','april','mei','juni',
+                     'juli','agustus','september','oktober','november','desember'];
+
+let DB = {};
+try { DB = JSON.parse(localStorage.getItem(LS_KEY)) || {}; } catch (e) { DB = {}; }
+
+const state = { month: 'ALL', category: 'ALL', search: '' };
+
+/* Bersihkan baris total (JUMLAH/TOTAL) yang terlanjur tersimpan dari upload sebelumnya */
+(function cleanDB() {
+  let changed = false;
+  Object.values(DB).forEach((d) => {
+    if (!d || !Array.isArray(d.items)) return;
+    const before = d.items.length;
+    d.items = d.items.filter((it) => !/^(JUMLAH|TOTAL|SUBTOTAL|GRAND TOTAL)\b/i.test(String(it.nama).trim()));
+    if (d.items.length !== before) changed = true;
+  });
+  if (changed) { try { localStorage.setItem(LS_KEY, JSON.stringify(DB)); } catch (e) {} }
+})();
+
+const $ = (id) => document.getElementById(id);
+
+
+/* =========================================================
+   CATATAN  (catatan baru ditambahkan di PALING ATAS array)
+   ========================================================= */
+const NOTES_KEY = 'gajahmas_notes_checked_v1';
+const NOTES = [
+  {
+    id: '2026-10-11',
+    tanggal: '11 Oktober 2026',
+    judul: 'Perlu dicek – data Juli s/d September 2026',
+    intro: 'Hasil perbandingan file Juli, Agustus, dan September 2026.',
+    items: [
+      { html: '<b>WHOSI WOSHI GREEN TEA</b> – qty 185 (Juli) dan 165 (Agustus), tapi kolom jumlah 0 di keduanya, lalu hilang di September. Jika stoknya memang ada, nilai Juli ± Rp 20,4 juta dan Agustus ± Rp 18,2 juta tidak terhitung.' },
+      { html: '<b>Qty sama berulang</b> (mungkin tidak diperbarui / hasil copy):<ul><li>KECAP PREMIUM 70ML dan SAMBAL GUNA 1 KG: 17 di Juli, Agustus, September</li><li>PUDDING SUSU CHOCOCREAM: 25 di tiga bulan; VANILLA: 4; COCOPANDAN: 2</li><li>KECAP JERIGEN 6KG: 12 di Agustus &amp; September</li><li>SHZ BAR KIREI: 72 di Agustus &amp; September</li></ul>' },
+      { html: '<b>Lonjakan qty</b> yang mencolok:<table><tr><th>Barang</th><th>Juli</th><th>Agustus</th><th>September</th></tr><tr><td>FITRI BOTOL 200 ML</td><td>894</td><td><b>2</b></td><td>930</td></tr><tr><td>SHZ 85 GR KENSHO</td><td>192</td><td>618</td><td><b>3</b></td></tr><tr><td>COCOMAXI CAIR 65 GR</td><td>102</td><td>70</td><td><b>3</b></td></tr><tr><td>STOK BOTOL KOSONG</td><td>49</td><td>14</td><td>398</td></tr><tr><td>SAMBAL GNG 600 REF</td><td>321</td><td>404</td><td>60</td></tr><tr><td>SHZ 85 GR SAKURA</td><td>540</td><td>3.574</td><td>2.360</td></tr><tr><td>LUMBA-LUMBA SUPER PUTIH</td><td>12</td><td>191</td><td>93</td></tr><tr><td>ZEN REFF SEALSAT</td><td>48</td><td>21</td><td>2</td></tr></table>Paling mencurigakan: FITRI 200 ML Agustus (2 unit) dan KENSHO September (3 unit).' },
+      { html: '<b>Barang hilang / muncul:</b> KECAP CG MANIS 150ML, KECAP CG MANIS 550 GR, dan NISSIN CRIPSY LEMON hanya ada di Juli (qty 0) lalu tidak muncul lagi – kembalikan barisnya jika untuk jaga-jaga barang masuk. NISSIN KG MARIE RAJA dan NS KUE KERING tidak ada di Juli, muncul di Agustus.' },
+      { html: '<b>Harga ZEN REFF (4 varian)</b> – 3.150 (jual) / 2.847 (beli) di Juli &amp; Agustus, jadi 4.250 / 3.958 di September, sama persis dengan SHZ REFIL. Kenaikan harga atau harga tertukar? Kenaikan harga FITRI, MIE IKAT, dan NISSIN CRIPSY CRACKER terlihat wajar.' },
+      { html: '<b>Margin tidak biasa</b> (sama di tiga bulan): PUDDING SUSU CHOCOCREAM 26,6% (harga jual 10.500, pudding lain 42.000), SAMBAL MEJA 135 ML 25,1%, JELLYGAR HEMAT PLAIN 21,6%. Barang lain umumnya ± 5–10%.' },
+      { html: '<b>Harga beli 0 di September</b> untuk barang baru yang qty-nya kosong: NS WALENS COKLAT SOES, MD SR SNACK GOLD 30, NS AYNAKO 10. Isi harga beli jika barang nanti masuk.' }
+    ]
+  }
+];
+
+function loadChecked() {
+  try { return JSON.parse(localStorage.getItem(NOTES_KEY)) || {}; } catch (e) { return {}; }
+}
+function saveChecked(c) {
+  try { localStorage.setItem(NOTES_KEY, JSON.stringify(c)); } catch (e) {}
+}
+function notesPending() {
+  const c = loadChecked();
+  let n = 0;
+  NOTES.forEach((nt) => nt.items.forEach((_, i) => { if (!c[nt.id + ':' + i]) n++; }));
+  return n;
+}
+function updateNotesBadge() {
+  const b = $('notesBadge'); if (!b) return;
+  const n = notesPending();
+  b.textContent = n; b.classList.toggle('on', n > 0);
+}
+function renderNotes() {
+  const c = loadChecked();
+  $('notesBody').innerHTML = NOTES.map((nt) => {
+    const done = nt.items.filter((_, i) => c[nt.id + ':' + i]).length;
+    const all = done === nt.items.length;
+    return `<div class="note-entry">
+      <div class="note-head">
+        <span class="nt">${esc(nt.judul)}</span>
+        <span class="np ${all ? 'done' : ''}">${done}/${nt.items.length} dicek</span>
+        <span class="nd">${esc(nt.tanggal)}</span>
+      </div>
+      ${nt.intro ? `<div class="note-intro">${esc(nt.intro)}</div>` : ''}
+      ${nt.items.map((it, i) => `
+        <label class="note-item ${c[nt.id + ':' + i] ? 'done' : ''}">
+          <input type="checkbox" data-nid="${esc(nt.id + ':' + i)}" ${c[nt.id + ':' + i] ? 'checked' : ''}>
+          <div class="nbody"><b>${i + 1}.</b> ${it.html}</div>
+        </label>`).join('')}
+    </div>`;
+  }).join('');
+  updateNotesBadge();
+}
+function openNotes() { renderNotes(); $('notesModal').classList.add('on'); }
+function closeNotes() { $('notesModal').classList.remove('on'); }
+
+/* =========================================================
+   UTILITAS
+   ========================================================= */
+function persist() {
+  try { localStorage.setItem(LS_KEY, JSON.stringify(DB)); }
+  catch (e) { toast('Gagal menyimpan ke browser (storage penuh)', 'err'); }
+}
+
+function fmt(n) {
+  const v = Number(n) || 0;
+  return new Intl.NumberFormat('id-ID').format(Math.round(v));
+}
+
+function esc(s) {
+  return String(s ?? '')
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
+function isEmpty(v) { return v === null || v === undefined || v === ''; }
+
+function num(v) {
+  if (isEmpty(v)) return 0;
+  if (typeof v === 'number') return isFinite(v) ? v : 0;
+  let s = String(v).replace(/[^0-9,.\-]/g, '');
+  if (s.includes(',') && s.includes('.')) s = s.replace(/\./g, '').replace(',', '.');
+  else if (s.includes(',')) s = s.replace(',', '.');
+  else s = s.replace(/\./g, '');
+  const n = parseFloat(s);
+  return isNaN(n) ? 0 : n;
+}
+
+function titleCase(s) {
+  return String(s).toLowerCase().replace(/\b[a-z]/g, (c) => c.toUpperCase());
+}
+
+function categorize(nama) {
+  return /FITRI/i.test(nama) ? 'Fitri' : 'Rua Rupa';
+}
+
+function hargaBeli(it) {
+  if (it.hb && it.hb > 0) return it.hb;
+  if (it.jb > 0 && it.qty > 0) return it.jb / it.qty;
+  return 0;
+}
+
+function toast(msg, type = 'ok', ms = 2800) {
+  const t = $('toast');
+  t.textContent = msg;
+  t.className = 'show ' + type;
+  clearTimeout(t._tm);
+  t._tm = setTimeout(() => { t.className = ''; }, ms);
+}
+
+/* =========================================================
+   PARSER EXCEL
+   ========================================================= */
+function parseWorkbook(wb, fileName) {
+  const ws = wb.Sheets[wb.SheetNames[0]];
+  const rows = XLSX.utils.sheet_to_json(ws, { header: 1, raw: true, defval: null, blankrows: true });
+
+  let periode = null;
+  for (const r of rows) {
+    for (const c of r) {
+      if (typeof c === 'string' && /periode/i.test(c)) {
+        const part = c.split(/periode\s*:?/i)[1];
+        if (part && part.trim()) periode = titleCase(part.trim());
+      }
+    }
+  }
+  if (!periode) {
+    const base = String(fileName || '').replace(/[_\-.]+/g, ' ');
+    const m = base.match(new RegExp('(' + MONTH_NAMES.join('|') + ')\\s*(\\d{4})', 'i'));
+    if (m) periode = titleCase(m[1] + ' ' + m[2]);
+  }
+  if (!periode) {
+    const inp = prompt('Periode tidak terdeteksi. Masukkan periode data (contoh: Juli 2026):', 'Juli 2026');
+    periode = (inp || 'Tanpa Periode').trim();
+  }
+  periode = titleCase(periode);
+
+  const items = [];
+  const warnings = [];
+  let idx = null;
+
+  for (const r of rows) {
+    if (!r) continue;
+    const cells = r.map((c) => (typeof c === 'string' ? c.trim().toUpperCase() : ''));
+
+    if (cells.includes('NAMA BARANG')) {
+      idx = {};
+      r.forEach((c, i) => {
+        const t = String(c ?? '').trim().toUpperCase();
+        if (t === 'NO') idx.no = i;
+        else if (t === 'NAMA BARANG') idx.nama = i;
+        else if (t === 'HARGA JUAL') idx.hj = i;
+        else if (t === 'HARGA BELI') idx.hb = i;
+        else if (t === 'QTY') idx.qty = i;
+        else if (t.startsWith('JML') && t.includes('JUAL')) idx.jj = i;
+        else if (t.startsWith('JML') && t.includes('BELI')) idx.jb = i;
+      });
+      continue;
+    }
+
+    if (!idx || idx.nama === undefined) continue;
+
+    const nama = String(r[idx.nama] ?? '').trim();
+    if (!nama) continue;
+
+    const upper = nama.toUpperCase();
+    if (/^(JUMLAH|TOTAL|SUBTOTAL|GRAND TOTAL)\b/.test(upper) || upper === 'NAMA BARANG') continue;
+
+    const qty = num(r[idx.qty]);
+    const hj  = num(r[idx.hj]);
+
+    const jbRaw = (idx.jb !== undefined && !isEmpty(r[idx.jb])) ? num(r[idx.jb]) : 0;
+
+    let hb;
+    if (idx.hb !== undefined && !isEmpty(r[idx.hb])) {
+      hb = num(r[idx.hb]);
+    } else if (qty > 0 && jbRaw > 0) {
+      hb = jbRaw / qty;
+    } else {
+      hb = 0;
+    }
+
+    /* Ikuti Excel apa adanya: jika kolom jumlah ada tapi sel kosong, nilainya 0 (tidak dihitung ulang).
+       Hanya jika kolom jumlah tidak ada sama sekali, dihitung dari harga x qty. */
+    const jj = (idx.jj !== undefined) ? num(r[idx.jj]) : hj * qty;
+    const jb = (idx.jb !== undefined) ? num(r[idx.jb]) : hb * qty;
+
+    if (qty > 0 && idx.jb !== undefined && isEmpty(r[idx.jb])) warnings.push(nama + ' (qty ' + qty + ')');
+
+    items.push({ nama, hj, hb, qty, jj, jb });
+  }
+
+  return { periode, items, warnings };
+}
+
+/* =========================================================
+   UPLOAD FILE
+   ========================================================= */
+async function handleFiles(fileList) {
+  const files = Array.from(fileList || []);
+  if (!files.length) return;
+
+  let okCount = 0, totalItems = 0;
+  const periods = [];
+  const allWarn = [];
+
+  for (const file of files) {
+    try {
+      const buf = await file.arrayBuffer();
+      const wb = XLSX.read(buf, { type: 'array' });
+      const parsed = parseWorkbook(wb, file.name);
+
+      if (!parsed.items.length) {
+        toast('Tidak ada data ditemukan di ' + file.name, 'err');
+        continue;
+      }
+
+      if (DB[parsed.periode]) {
+        const yes = confirm(`Data periode "${parsed.periode}" sudah ada.\nTimpa dengan data baru?`);
+        if (!yes) continue;
+      }
+
+      DB[parsed.periode] = {
+        periode: parsed.periode,
+        items: parsed.items,
+        fileName: file.name,
+        uploadedAt: new Date().toISOString()
+      };
+
+      parsed.warnings.forEach((w) => allWarn.push(parsed.periode + ': ' + w));
+      okCount++;
+      totalItems += parsed.items.length;
+      periods.push(parsed.periode);
+    } catch (err) {
+      console.error(err);
+      toast('Gagal membaca ' + file.name, 'err');
+    }
+  }
+
+  if (okCount) {
+    persist();
+    if (periods.length === 1) state.month = periods[0];
+    render();
+    toast(`Berhasil upload ${okCount} file • ${totalItems} item • ${periods.join(', ')}`, 'ok');
+    if (allWarn.length) {
+      setTimeout(() => alert('PERINGATAN: qty terisi tapi kolom jumlah di Excel kosong.\nDi aplikasi nilainya ditampilkan 0 (sama dengan Excel), tidak ikut total:\n\n' + allWarn.join('\n') + '\n\nJika barang ini ada stoknya, isi kolom jumlah di Excel lalu upload ulang. Jika kosong, hapus qty-nya.'), 400);
+    }
+  }
+}
+
+/* =========================================================
+   EXPORT EXCEL
+   ========================================================= */
+function safeSheetName(name) {
+  return String(name).replace(/[\\\/\?\*\[\]:]/g, '').slice(0, 31) || 'Sheet1';
+}
+
+function exportExcel(monthsArr) {
+  const valid = monthsArr.filter((m) => DB[m]);
+  if (!valid.length) { toast('Tidak ada data untuk disimpan', 'err'); return; }
+
+  const wb = XLSX.utils.book_new();
+
+  valid.forEach((m) => {
+    const d = DB[m];
+    const aoa = [
+      ['NILAI STOCK CV GAJAH MAS'],
+      ['PERIODE ' + d.periode.toUpperCase() + '  ' + SUFFIX.toUpperCase()],
+      [],
+      ['NO', 'NAMA BARANG', 'HARGA JUAL', 'HARGA BELI', 'QTY', 'JML DR HARGA JUAL', 'JML DR HARGA BELI']
+    ];
+
+    d.items.forEach((it, i) => {
+      aoa.push([i + 1, it.nama, it.hj, Math.round(hargaBeli(it)), it.qty, it.jj, it.jb]);
+    });
+
+    const tJ = d.items.reduce((a, b) => a + b.jj, 0);
+    const tB = d.items.reduce((a, b) => a + b.jb, 0);
+    aoa.push(['', 'JUMLAH', '', '', '', tJ, tB]);
+
+    const ws = XLSX.utils.aoa_to_sheet(aoa);
+    ws['!cols'] = [
+      { wch: 5 }, { wch: 38 }, { wch: 13 }, { wch: 13 },
+      { wch: 8 }, { wch: 19 }, { wch: 19 }
+    ];
+    XLSX.utils.book_append_sheet(wb, ws, safeSheetName(m));
+  });
+
+  if (valid.length > 1) {
+    const sAoa = [[
+      'BULAN', 'QTY FITRI', 'NILAI FITRI (HARGA BELI)',
+      'QTY RUA RUPA', 'NILAI RUA RUPA (HARGA BELI)',
+      'TOTAL SEMUA (HARGA BELI)'
+    ]];
+    let tQF = 0, tNF = 0, tQR = 0, tNR = 0;
+    valid.forEach((m) => {
+      const s = monthSummary(m);
+      tQF += s.qF; tNF += s.nF; tQR += s.qR; tNR += s.nR;
+      sAoa.push([m.toUpperCase(), s.qF, s.nF, s.qR, s.nR, s.nF + s.nR]);
+    });
+    sAoa.push(['TOTAL', tQF, tNF, tQR, tNR, tNF + tNR]);
+
+    const wsS = XLSX.utils.aoa_to_sheet(sAoa);
+    wsS['!cols'] = [
+      { wch: 18 }, { wch: 12 }, { wch: 22 },
+      { wch: 14 }, { wch: 22 }, { wch: 22 }
+    ];
+    XLSX.utils.book_append_sheet(wb, wsS, 'Ringkasan Bulanan');
+  }
+
+  let fname;
+  if (valid.length === 1) {
+    fname = 'Nilai_Stock_CV_Gajah_Mas_' + valid[0].replace(/\s+/g, '_') + '.xlsx';
+  } else {
+    fname = 'Nilai_Stock_CV_Gajah_Mas_' + valid.length + '_Bulan.xlsx';
+  }
+
+  XLSX.writeFile(wb, fname);
+  toast(`File Excel (${valid.length} bulan) berhasil diunduh`, 'ok');
+}
+
+function openExportModal() {
+  const months = Object.keys(DB);
+  if (!months.length) { toast('Tidak ada data untuk disimpan', 'err'); return; }
+
+  $('exportList').innerHTML = months.map((m) => `
+    <label>
+      <input type="checkbox" value="${esc(m)}" checked>
+      <span>${esc(m)}</span>
+    </label>
+  `).join('');
+
+  $('exportModal').classList.add('on');
+}
+
+function closeExportModal() {
+  $('exportModal').classList.remove('on');
+}
+
+function confirmExport() {
+  const checked = Array.from($('exportList').querySelectorAll('input[type=checkbox]:checked'))
+    .map((c) => c.value);
+  if (!checked.length) { toast('Pilih minimal satu bulan', 'err'); return; }
+  closeExportModal();
+  exportExcel(checked);
+}
+
+/* =========================================================
+   RINGKASAN BULANAN
+   ========================================================= */
+function monthSummary(m) {
+  const d = DB[m];
+  let qF = 0, nF = 0, qR = 0, nR = 0;
+  if (d) {
+    d.items.forEach((it) => {
+      const cat = categorize(it.nama);
+      if (cat === 'Fitri') { qF += it.qty; nF += it.jb; }
+      else                 { qR += it.qty; nR += it.jb; }
+    });
+  }
+  return { qF, nF, qR, nR };
+}
+
+function buildSummaryTable(months) {
+  let tQF = 0, tNF = 0, tQR = 0, tNR = 0;
+
+  let rows = '';
+  months.forEach((m) => {
+    const s = monthSummary(m);
+    tQF += s.qF; tNF += s.nF; tQR += s.qR; tNR += s.nR;
+    rows += `<tr>
+      <td>${esc(m)}</td>
+      <td class="num">${fmt(s.qF)}</td>
+      <td class="num">Rp ${fmt(s.nF)}</td>
+      <td class="num">${fmt(s.qR)} unit</td>
+      <td class="num">Rp ${fmt(s.nR)}</td>
+      <td class="num">Rp ${fmt(s.nF + s.nR)}</td>
+    </tr>`;
+  });
+
+  if (months.length > 1) {
+    rows += `<tr class="total-row">
+      <td>TOTAL</td>
+      <td class="num">${fmt(tQF)}</td>
+      <td class="num">Rp ${fmt(tNF)}</td>
+      <td class="num">${fmt(tQR)} unit</td>
+      <td class="num">Rp ${fmt(tNR)}</td>
+      <td class="num">Rp ${fmt(tNF + tNR)}</td>
+    </tr>`;
+  }
+
+  return `
+    <section class="section summary">
+      <div class="section-head">
+        <span>📅 Ringkasan Data Bulanan ${esc(SUFFIX)}</span>
+        <span class="badge">${months.length} bulan</span>
+      </div>
+      <div class="table-wrap">
+        <table class="month-summary">
+          <thead>
+            <tr>
+              <th>Bulan</th>
+              <th>QTY Fitri</th>
+              <th>Nilai Fitri (Harga Beli)</th>
+              <th>QTY Rua Rupa</th>
+              <th>Nilai Rua Rupa (Harga Beli)</th>
+              <th>Total Semua (Harga Beli)</th>
+            </tr>
+          </thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>
+    </section>`;
+}
+
+/* =========================================================
+   RENDER FILTER BULAN (DROPDOWN)
+   ========================================================= */
+function renderMonthFilter() {
+  const sel = $('monthFilter');
+  const months = Object.keys(DB);
+
+  if (!months.length) {
+    sel.innerHTML = '<option value="ALL">Data Bulanan</option>';
+    sel.value = 'ALL';
+    sel.disabled = true;
+    return;
+  }
+  sel.disabled = false;
+
+  if (state.month !== 'ALL' && !DB[state.month]) state.month = 'ALL';
+
+  let html = `<option value="ALL">Data Bulanan (Semua)</option>`;
+  months.forEach((m) => {
+    const cnt = DB[m] ? DB[m].items.length : 0;
+    html += `<option value="${esc(m)}">${esc(m)} (${cnt})</option>`;
+  });
+  sel.innerHTML = html;
+  sel.value = state.month;
+}
+
+/* =========================================================
+   RENDER UTAMA
+   ========================================================= */
+function render() {
+  const months = Object.keys(DB);
+
+  if (state.month !== 'ALL' && !DB[state.month]) state.month = 'ALL';
+
+  renderMonthFilter();
+
+  const srcMonths = state.month === 'ALL' ? months : [state.month];
+  let items = [];
+  srcMonths.forEach((m) => { if (DB[m]) items = items.concat(DB[m].items); });
+
+  const filtered = items.filter((it) => {
+    if (state.category !== 'ALL' && categorize(it.nama) !== state.category) return false;
+    if (state.search && !it.nama.toLowerCase().includes(state.search.toLowerCase())) return false;
+    return true;
+  });
+
+  /* ----- STATISTIK ----- */
+  let beliFitri = 0, beliRua = 0;
+  let qtyFitri = 0, qtyRua = 0;
+
+  filtered.forEach((it) => {
+    const cat = categorize(it.nama);
+    if (cat === 'Fitri') { beliFitri += it.jb; qtyFitri += it.qty; }
+    else                 { beliRua   += it.jb; qtyRua   += it.qty; }
+  });
+
+  const totalBeli = beliFitri + beliRua;
+  const totalQty  = qtyFitri + qtyRua;
+
+  $('stats').innerHTML = `
+    <div class="card fitri">
+      <div class="lbl">Nilai Fitri (Harga Beli)</div>
+      <div class="val">Rp ${fmt(beliFitri)}</div>
+      <div class="sub">${fmt(qtyFitri)} unit</div>
+    </div>
+    <div class="card ruarupa">
+      <div class="lbl">Nilai Rua Rupa (Harga Beli)</div>
+      <div class="val">Rp ${fmt(beliRua)}</div>
+      <div class="sub">${fmt(qtyRua)} unit</div>
+    </div>
+    <div class="card total">
+      <div class="lbl">Total Semua (Harga Beli)</div>
+      <div class="val">Rp ${fmt(totalBeli)}</div>
+      <div class="sub">${fmt(totalQty)} unit total</div>
+    </div>
+  `;
+
+  if (!months.length) {
+    $('content').innerHTML = `
+      <div class="empty">
+        <div class="big">📊</div>
+        <h3>Belum Ada Data Stock</h3>
+        <p>Klik tombol <b>☰ Menu</b> di kanan atas lalu pilih <b>📤 Upload Excel</b>,
+        atau seret (drag &amp; drop) file <b>Nilai_Stock_CV_Gajah_Mas.xlsx</b> ke halaman ini.<br><br>
+        Data akan otomatis tersimpan di browser dan bisa difilter per bulan.</p>
+      </div>`;
+    return;
+  }
+
+  /* Mode "Data Bulanan" → ringkasan bulanan */
+  if (state.month === 'ALL') {
+    $('content').innerHTML = buildSummaryTable(months);
+    return;
+  }
+
+  /* Mode bulan tertentu → detail per kategori */
+  if (!filtered.length) {
+    $('content').innerHTML = `
+      <div class="empty">
+        <div class="big">🔍</div>
+        <h3>Tidak ada data yang cocok</h3>
+        <p>Coba ubah filter kategori atau kata kunci pencarian.</p>
+      </div>`;
+    return;
+  }
+
+  let html = '';
+
+  CATEGORIES.forEach((cat) => {
+    const group = filtered.filter((it) => categorize(it.nama) === cat);
+    if (!group.length) return;
+
+    const sJ = group.reduce((a, b) => a + b.jj, 0);
+    const sB = group.reduce((a, b) => a + b.jb, 0);
+    const sQ = group.reduce((a, b) => a + b.qty, 0);
+    const icon = cat === 'Fitri' ? '🟢' : '🔵';
+
+    html += `
+      <section class="section">
+        <div class="section-head">
+          <span>${icon} ${esc(cat)} ${esc(SUFFIX)}</span>
+          <span class="badge">${group.length} item</span>
+          <span class="badge">Rp ${fmt(sB)} (beli)</span>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th class="col-no">No</th>
+                <th>Nama Barang</th>
+                <th class="num">Harga Jual</th>
+                <th class="num">Harga Beli</th>
+                <th class="num">Qty</th>
+                <th class="num">Jml dr Harga Jual</th>
+                <th class="num">Jml dr Harga Beli</th>
+              </tr>
+            </thead>
+            <tbody>`;
+
+    group.forEach((it, i) => {
+      html += `<tr>
+        <td class="col-no">${i + 1}</td>
+        <td class="nama">${esc(it.nama)}</td>
+        <td class="num">${fmt(it.hj)}</td>
+        <td class="num">${fmt(hargaBeli(it))}</td>
+        <td class="num">${fmt(it.qty)}</td>
+        <td class="num">${fmt(it.jj)}</td>
+        <td class="num">${fmt(it.jb)}</td>
+      </tr>`;
+    });
+
+    html += `
+              <tr class="subtotal">
+                <td colspan="4">Subtotal ${esc(cat)}</td>
+                <td class="num">${fmt(sQ)}</td>
+                <td class="num">${fmt(sJ)}</td>
+                <td class="num">${fmt(sB)}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>`;
+  });
+
+  $('content').innerHTML = html;
+}
+
+/* =========================================================
+   HAPUS DATA
+   ========================================================= */
+function deleteMonth() {
+  if (state.month === 'ALL') {
+    toast('Pilih bulan tertentu dulu untuk dihapus', 'err');
+    return;
+  }
+  if (!DB[state.month]) { toast('Data bulan ini tidak ada', 'err'); return; }
+
+  if (!confirm(`Hapus semua data periode "${state.month}"?`)) return;
+  delete DB[state.month];
+  state.month = 'ALL';
+  persist();
+  render();
+  toast('Data periode berhasil dihapus', 'ok');
+}
+
+function deleteAll() {
+  if (!Object.keys(DB).length) { toast('Belum ada data', 'err'); return; }
+  if (!confirm('Hapus SEMUA data stock yang tersimpan?')) return;
+  DB = {};
+  state.month = 'ALL';
+  persist();
+  render();
+  toast('Semua data berhasil dihapus', 'ok');
+}
+
+/* =========================================================
+   EVENT BINDING
+   ========================================================= */
+document.addEventListener('DOMContentLoaded', () => {
+  const menuBtn = $('menuBtn');
+  const menuDd = $('menuDropdown');
+
+  menuBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    menuDd.classList.toggle('open');
+  });
+
+  document.addEventListener('click', (e) => {
+    if (!e.target.closest('.menu-wrap')) menuDd.classList.remove('open');
+  });
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      menuDd.classList.remove('open');
+      closeNotes();
+      closeExportModal();
+    }
+  });
+
+  menuDd.addEventListener('click', (e) => {
+    const btn = e.target.closest('button[data-act]');
+    if (!btn) return;
+    menuDd.classList.remove('open');
+
+    switch (btn.dataset.act) {
+      case 'upload':    $('fileInput').click(); break;
+      case 'save':      openExportModal(); break;
+      case 'notes':     openNotes(); break;
+      case 'delete':    deleteMonth(); break;
+      case 'deleteAll': deleteAll(); break;
+    }
+  });
+
+  $('monthFilter').addEventListener('change', (e) => {
+    state.month = e.target.value;
+    render();
+  });
+
+  $('fileInput').addEventListener('change', (e) => {
+    handleFiles(e.target.files);
+    e.target.value = '';
+  });
+
+  $('categoryFilter').addEventListener('change', (e) => {
+    state.category = e.target.value;
+    render();
+  });
+  $('searchInput').addEventListener('input', (e) => {
+    state.search = e.target.value.trim();
+    render();
+  });
+
+  $('notesClose').addEventListener('click', closeNotes);
+  $('notesModal').addEventListener('click', (e) => { if (e.target === $('notesModal')) closeNotes(); });
+  $('notesBody').addEventListener('change', (e) => {
+    const cb = e.target.closest('input[data-nid]'); if (!cb) return;
+    const c = loadChecked();
+    if (cb.checked) c[cb.dataset.nid] = 1; else delete c[cb.dataset.nid];
+    saveChecked(c); renderNotes();
+  });
+  updateNotesBadge();
+  $('exportCancel').addEventListener('click', closeExportModal);
+  $('exportConfirm').addEventListener('click', confirmExport);
+
+  $('exportModal').addEventListener('click', (e) => {
+    if (e.target === $('exportModal')) closeExportModal();
+  });
+
+  $('toggleAll').addEventListener('click', () => {
+    const boxes = $('exportList').querySelectorAll('input[type=checkbox]');
+    const allChecked = Array.from(boxes).every((b) => b.checked);
+    boxes.forEach((b) => { b.checked = !allChecked; });
+    $('toggleAll').textContent = allChecked ? 'Pilih Semua' : 'Kosongkan';
+  });
+
+  const drop = $('drop');
+  let dragDepth = 0;
+  window.addEventListener('dragenter', (e) => {
+    e.preventDefault();
+    dragDepth++;
+    drop.classList.add('on');
+  });
+  window.addEventListener('dragover', (e) => e.preventDefault());
+  window.addEventListener('dragleave', () => {
+    dragDepth--;
+    if (dragDepth <= 0) { dragDepth = 0; drop.classList.remove('on'); }
+  });
+  window.addEventListener('drop', (e) => {
+    e.preventDefault();
+    dragDepth = 0;
+    drop.classList.remove('on');
+    if (e.dataTransfer && e.dataTransfer.files.length) handleFiles(e.dataTransfer.files);
+  });
+
+  render();
+});
+</script>
+</body>
+</html>
