@@ -17,15 +17,27 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
   html, body { height: 100%; }
   body { font-family: 'Segoe UI', Arial, sans-serif; background: #0d1117; display: flex; flex-direction: column; overflow: hidden; }
-  .main-tabs { display: flex; gap: 2px; background: #1b3a5f; padding: 4px 8px 0; flex-shrink: 0; }
-  .main-tab { padding: 6px 12px; font-size: .82rem; font-weight: 600; color: #cfd8e6; background: transparent;
-    border: none; border-radius: 6px 6px 0 0; cursor: pointer; transition: background .15s, color .15s; }
-  .main-tab:hover { background: rgba(255,255,255,.12); color: #fff; }
-  .main-tab.active { background: #f0f2f5; color: #1b3a5f; }
+  .main-tabs { display: flex; align-items: center; gap: 2px; background: #1e293b; padding: 4px 10px;
+    flex-shrink: 0; border-bottom: 1px solid #334155; overflow-x: auto; }
+  .main-tabs::-webkit-scrollbar { display: none; }
+  .main-tabs { -ms-overflow-style: none; scrollbar-width: none; }
+  .main-tab { display: inline-flex; align-items: center; gap: 6px; padding: 6px 10px; font-size: .75rem;
+    font-weight: 400; color: #94a3b8; background: transparent; border: none; border-radius: 6px;
+    cursor: pointer; transition: background .15s, color .15s; white-space: nowrap; font-family: inherit; }
+  .main-tab i { font-size: .65rem; }
+  .main-tab:hover { background: #334155; color: #e2e8f0; }
+  .main-tab.active { background: #334155; color: #fff; font-weight: 500; }
+  .main-tab .ic-blue { color: #60a5fa; }
+  .main-tab .ic-emerald { color: #34d399; }
+  .main-tab .ic-green { color: #4ade80; }
+  .main-tab .ic-slate { color: #94a3b8; }
+  .main-tab .ic-yellow { color: #facc15; }
+  .main-tab .ic-orange { color: #fb923c; }
   .frames { flex: 1; position: relative; min-height: 0; }
   .frames iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; background: #fff;
     visibility: hidden; pointer-events: none; }
@@ -33,13 +45,23 @@
   :root[data-theme="light"] body { background: #f0f2f5; }
   :root[data-theme="light"] .frames iframe { background: #fff; }
   :root[data-theme="dark"] .frames iframe { background: #0d1117; }
-  :root[data-theme="dark"] .main-tabs { background: #161b22; border-bottom: 1px solid #30363d; }
-  :root[data-theme="dark"] .main-tab { color: #8b949e; }
-  :root[data-theme="dark"] .main-tab:hover { background: rgba(255,255,255,.08); color: #e6edf3; }
-  :root[data-theme="dark"] .main-tab.active { background: #0d1117; color: #58a6ff; }
-  .theme-btn { margin-left: auto; align-self: center; margin-bottom: 3px; background: rgba(255,255,255,.15); color: #fff; border: none;
-    padding: 3px 12px; font-size: .78rem; font-weight: 600; border-radius: 5px; cursor: pointer; }
-  .theme-btn:hover { background: rgba(255,255,255,.3); }
+  :root[data-theme="dark"] .main-tabs { background: #1e293b; border-bottom: 1px solid #334155; }
+  :root[data-theme="dark"] .main-tab { color: #94a3b8; }
+  :root[data-theme="dark"] .main-tab:hover { background: #334155; color: #e2e8f0; }
+  :root[data-theme="dark"] .main-tab.active { background: #334155; color: #fff; }
+  :root[data-theme="light"] .main-tabs { background: #1e293b; border-bottom: 1px solid #334155; }
+  :root[data-theme="light"] .main-tab { color: #94a3b8; }
+  :root[data-theme="light"] .main-tab:hover { background: #334155; color: #e2e8f0; }
+  :root[data-theme="light"] .main-tab.active { background: #334155; color: #fff; }
+  :root[data-theme="light"] .theme-btn { color: #94a3b8; }
+  :root[data-theme="light"] .theme-btn:hover { background: #334155; color: #e2e8f0; }
+  :root[data-theme="light"] .mn-btn { color: #94a3b8; }
+  :root[data-theme="light"] .mn-btn:hover, :root[data-theme="light"] .mn-btn.on { background: #334155; color: #e2e8f0; }
+  .theme-btn { margin-left: auto; display: inline-flex; align-items: center; gap: 6px; background: transparent;
+    color: #94a3b8; border: none; padding: 6px 10px; font-size: .75rem; font-weight: 400; border-radius: 6px;
+    cursor: pointer; transition: background .15s, color .15s; font-family: inherit; white-space: nowrap; }
+  .theme-btn:hover { background: #334155; color: #e2e8f0; }
+  .theme-btn i { font-size: .65rem; }
   .bk-ov{--bg:#fff;--tx:#1e293b;--mu:#64748b;--bd:#d6dde8;--pr:#1f4e8c;display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.55);align-items:center;justify-content:center;padding:12px}
   :root[data-theme=dark] .bk-ov{--bg:#161b22;--tx:#e6edf3;--mu:#8b949e;--bd:#30363d;--pr:#2f5fa8}
   .bk-ov.show{display:flex}
@@ -54,9 +76,10 @@
   #bkMsg.err{background:rgba(220,38,38,.14);color:#dc2626}
   .bk-lnk{background:none;border:0;color:var(--pr);text-decoration:underline;cursor:pointer;font-size:.72rem;padding:0}
   /* ===== MENU pojok kanan atas ===== */
-  .mn-wrap{position:relative;align-self:center;margin-bottom:3px;margin-left:6px}
-  .mn-btn{background:rgba(255,255,255,.15);color:#fff;border:none;padding:3px 12px;font-size:.78rem;font-weight:600;border-radius:5px;cursor:pointer;display:inline-flex;align-items:center;gap:6px}
-  .mn-btn:hover,.mn-btn.on{background:rgba(255,255,255,.3)}
+  .mn-wrap{position:relative;margin-left:2px;flex-shrink:0}
+  .mn-btn{background:transparent;color:#94a3b8;border:none;padding:6px 10px;font-size:.75rem;font-weight:400;border-radius:6px;cursor:pointer;display:inline-flex;align-items:center;gap:6px;font-family:inherit;transition:background .15s,color .15s;white-space:nowrap}
+  .mn-btn:hover,.mn-btn.on{background:#334155;color:#e2e8f0}
+  .mn-btn i{font-size:.65rem}
   .mn-dd{--bg:#fff;--tx:#1e293b;--bd:#d6dde8;--hv:#eef3fb;display:none;position:absolute;top:calc(100% + 6px);right:0;min-width:230px;background:var(--bg);color:var(--tx);border:1px solid var(--bd);border-radius:10px;box-shadow:0 12px 32px rgba(0,0,0,.35);padding:5px;z-index:9500}
   :root[data-theme=dark] .mn-dd{--bg:#161b22;--tx:#e6edf3;--bd:#30363d;--hv:#21262d}
   .mn-dd.show{display:block}
@@ -134,18 +157,18 @@
 </div></div>
 <script>(function(){var ok=false;try{ok=sessionStorage.getItem('pinOk')==='1'}catch(e){}document.getElementById(ok?'ldOv':'pinOv').classList.add('show')})()</script>
 <div class="main-tabs">
-  <button class="main-tab active" data-tab="penjualan">📈 Penjualan</button>
-  <button class="main-tab" data-tab="uangmasuk">💰 Uang Masuk</button>
-  <button class="main-tab" data-tab="cek">✅ Cek</button>
-  <button class="main-tab" data-tab="ar">📋 AR</button>
-  <button class="main-tab" data-tab="hd">📦 HD</button>
-  <button class="main-tab" data-tab="kaskecil">💵 Kas Kecil</button>
-  <button class="main-tab" data-tab="stok">📦 Stok Fitri</button>
-  <button class="main-tab" data-tab="stoksfa">📊 Stok SFA</button>
-  <button class="main-tab" data-tab="neraca">⚖️ Neraca</button>
-  <button class="theme-btn" id="themeBtn" title="Ganti mode gelap / terang (semua tab)">☀️ Terang</button>
+  <button class="main-tab active" data-tab="penjualan"><i class="fa-solid fa-chart-line ic-blue"></i> Penjualan</button>
+  <button class="main-tab" data-tab="uangmasuk"><i class="fa-solid fa-wallet ic-emerald"></i> Uang Masuk</button>
+  <button class="main-tab" data-tab="cek"><i class="fa-solid fa-check-circle ic-green"></i> Cek</button>
+  <button class="main-tab" data-tab="ar"><i class="fa-regular fa-file-lines ic-slate"></i> AR</button>
+  <button class="main-tab" data-tab="hd"><i class="fa-regular fa-hard-drive ic-slate"></i> HD</button>
+  <button class="main-tab" data-tab="kaskecil"><i class="fa-solid fa-coins ic-yellow"></i> Kas Kecil</button>
+  <button class="main-tab" data-tab="stok"><i class="fa-solid fa-box ic-orange"></i> Stok Fitri</button>
+  <button class="main-tab" data-tab="stoksfa"><i class="fa-solid fa-boxes-stacked ic-orange"></i> Stok SFA</button>
+  <button class="main-tab" data-tab="neraca"><i class="fa-solid fa-scale-balanced ic-blue"></i> Neraca</button>
+  <button class="theme-btn" id="themeBtn" title="Ganti mode gelap / terang (semua tab)"><i class="fa-regular fa-sun"></i> Terang</button>
   <div class="mn-wrap">
-    <button class="mn-btn" id="mnBtn" title="Menu">☰ Menu</button>
+    <button class="mn-btn" id="mnBtn" title="Menu"><i class="fa-solid fa-bars"></i> Menu</button>
     <div class="mn-dd" id="mnDd">
       <button class="mn-item" id="bkOpen" title="Backup, Restore & Sync antar-device">☁️ Backup / Sync</button>
       <div class="mn-sep"></div>
@@ -195,7 +218,7 @@ openTab(start);
 function currentTheme() { let t = 'dark'; try { t = localStorage.getItem('theme') || 'dark'; } catch (e) {} return t === 'light' ? 'light' : 'dark'; }
 function applyThemeAll(t) {
   document.documentElement.setAttribute('data-theme', t);
-  document.getElementById('themeBtn').textContent = t === 'dark' ? '☀️ Terang' : '🌙 Gelap';
+  document.getElementById('themeBtn').innerHTML = t === 'dark' ? '<i class="fa-regular fa-sun"></i> Terang' : '<i class="fa-regular fa-moon"></i> Gelap';
   document.querySelectorAll('.frames iframe').forEach(f => {
     try { f.contentWindow.document.documentElement.setAttribute('data-theme', t); } catch (e) {}
   });
