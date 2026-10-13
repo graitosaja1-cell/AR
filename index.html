@@ -80,7 +80,7 @@
   .mn-btn{background:transparent;color:#94a3b8;border:none;padding:6px 10px;font-size:.75rem;font-weight:400;border-radius:6px;cursor:pointer;display:inline-flex;align-items:center;gap:6px;font-family:inherit;transition:background .15s,color .15s;white-space:nowrap}
   .mn-btn:hover,.mn-btn.on{background:#334155;color:#e2e8f0}
   .mn-btn i{font-size:.65rem}
-  .mn-dd{--bg:#fff;--tx:#1e293b;--bd:#d6dde8;--hv:#eef3fb;display:none;position:absolute;top:calc(100% + 6px);right:0;min-width:230px;background:var(--bg);color:var(--tx);border:1px solid var(--bd);border-radius:10px;box-shadow:0 12px 32px rgba(0,0,0,.35);padding:5px;z-index:9500}
+  .mn-dd{--bg:#fff;--tx:#1e293b;--bd:#d6dde8;--hv:#eef3fb;display:none;position:fixed;top:40px;right:8px;min-width:230px;background:var(--bg);color:var(--tx);border:1px solid var(--bd);border-radius:10px;box-shadow:0 12px 32px rgba(0,0,0,.35);padding:5px;z-index:9500}
   :root[data-theme=dark] .mn-dd{--bg:#161b22;--tx:#e6edf3;--bd:#30363d;--hv:#21262d}
   .mn-dd.show{display:block}
   .mn-item{display:flex;align-items:center;gap:8px;width:100%;text-align:left;padding:9px 12px;border:0;border-radius:7px;background:transparent;color:var(--tx);font:600 .8rem 'Segoe UI',Arial,sans-serif;cursor:pointer;white-space:nowrap}
@@ -262,7 +262,9 @@ const NF = new Intl.NumberFormat('id-ID', { maximumFractionDigits: 2 });
 /* ----- dropdown MENU ----- */
 const dd = $('#mnDd'), mb = $('#mnBtn');
 const closeMenu = () => { dd.classList.remove('show'); mb.classList.remove('on'); };
-mb.addEventListener('click', e => { e.stopPropagation(); mb.classList.toggle('on', dd.classList.toggle('show')); });
+const placeMenu = () => { const r = mb.getBoundingClientRect(); dd.style.top = (r.bottom + 6) + 'px'; dd.style.right = Math.max(8, window.innerWidth - r.right) + 'px'; };
+mb.addEventListener('click', e => { e.stopPropagation(); placeMenu(); mb.classList.toggle('on', dd.classList.toggle('show')); });
+window.addEventListener('resize', closeMenu);
 dd.addEventListener('click', closeMenu);                       /* klik item -> menu menutup */
 document.addEventListener('click', e => { if (!e.target.closest('.mn-wrap')) closeMenu(); });
 window.addEventListener('blur', closeMenu);                    /* klik di dalam iframe */
