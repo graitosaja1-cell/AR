@@ -579,7 +579,7 @@ const dcount=()=>{const d=dget();return Object.keys(d.inv).length+Object.keys(d.
 const kget=()=>new Set(jget('rumusku_known',[])),kset=s=>localStorage.setItem('rumusku_known',JSON.stringify([...s]));
 function cloudUI(msg){
   const n=dcount();window.cloudOn=!!sbUser;
-  $('cloudMsg').textContent=msg||(sbUser?(n?'⚠ '+n+' perubahan belum terunggah ke cloud — tekan "Sinkronkan ke Cloud".':'☁ Tersinkron ke cloud'):(sb?'☁ Belum masuk. Data hanya di perangkat ini.':'☁ Mode offline (cloud tidak tersedia). Data hanya di perangkat ini.'));
+  $('cloudMsg').textContent=msg||(sbUser?(n?'⚠ '+n+' perubahan belum terunggah ke cloud — tekan "Sinkronkan ke Cloud".':'☁ Tersinkron ke cloud'):(sb?'☁ Belum masuk — data tersimpan di perangkat ini. Ketuk ☁ Masuk (cukup sekali di perangkat ini) untuk sinkron ke cloud.':'☁ Mode offline (cloud tidak tersedia). Data hanya di perangkat ini.'));
   $('cloudLogin').style.display=(!sbUser&&sb)?'':'none';$('cloudSync').style.display=sbUser?'':'none';
   const bd=$('cloudBadge');if(bd){if(sbUser){bd.textContent=n?'☁ !':'☁ ✓';bd.style.color=n?'#b42318':'#16a34a'}else{bd.textContent=sb?'☁ Masuk':'☁ offline';bd.style.color=''}}
 }
@@ -703,7 +703,6 @@ $('lgSkip').onclick=closeLogin;$('cloudLogin').onclick=openLogin;$('cloudSync').
   sb.auth.onAuthStateChange((ev,sess)=>{ // jangan await panggilan supabase di dalam callback ini
     const u=sess&&sess.user||null,changed=(u&&u.id)!==(sbUser&&sbUser.id);sbUser=u;cloudUI();
     if(u&&changed)setTimeout(cloudPull,0);
-    if(!u&&ev==='INITIAL_SESSION'&&!askedLogin){askedLogin=true;setTimeout(openLogin,300)}
   });
   cloudUI();
 })();
