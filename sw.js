@@ -1,6 +1,6 @@
 /* Service worker — Laporan PWA. Naikkan nomor VERSI bila ingin memaksa cache lama dibuang. */
-const VERSI = 'laporan-v4';
-const INTI = ['./', 'index.html', 'STOK-FITRI.html', 'STOK-SFA.html', 'manifest.webmanifest', 'icons/icon-192.png', 'icons/icon-512.png'];
+const VERSI = 'laporan-v5';
+const INTI = ['./', 'index.html', 'STOK-FITRI.html', 'STOK-SFA.html', 'INVOICE.html', 'manifest.webmanifest', 'icons/icon-192.png', 'icons/icon-512.png'];
 const HOST_LUAR = /(^|\.)jsdelivr\.net$|^cdnjs\.cloudflare\.com$|^fonts\.googleapis\.com$|^fonts\.gstatic\.com$|^cdn\.sheetjs\.com$/;
 
 self.addEventListener('install', e => {

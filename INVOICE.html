@@ -1,0 +1,712 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<script>try{document.documentElement.setAttribute('data-theme',localStorage.getItem('theme')||'dark')}catch(e){}</script>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Rumusku Fitri — Perhitungan Harga Beli</title>
+<link rel="icon" href="icons/icon-192.png"><link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<style>
+:root{--bg:#f4f6f9;--panel:#fff;--text:#172033;--muted:#64748b;--line:#d9e0ea;--blue:#155eef;--yellow:#fff2a8;--green:#e8f7ee;--red:#fdecec}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:14px/1.45 Arial,Helvetica,sans-serif}
+header{background:#163b65;color:#fff;padding:6px 24px}header p{margin:0;color:#d9e8f8;font-size:12px}
+main{max-width:1500px;margin:0 auto 18px;padding:0 16px 30px}.panel{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px;margin-bottom:15px;box-shadow:0 2px 8px #1522380a}.panel.meta-panel{background:transparent;border:0;box-shadow:none;padding:2px 0;margin-bottom:2px}
+.meta{display:grid;grid-template-columns:repeat(4,minmax(150px,1fr));gap:8px}.field label{display:block;font-size:11px;color:var(--muted);margin-bottom:2px;font-weight:700}.meta .field input{padding:4px 8px;font-size:13px}.field input{width:100%;padding:9px 10px;border:1px solid var(--line);border-radius:7px;background:#fff;color:#172033}
+.discount-row{display:flex;align-items:end;gap:12px;flex-wrap:wrap;margin-bottom:4px}
+.discount{display:flex;gap:14px;flex-wrap:wrap;align-items:end;flex:1}.discount .field{width:min(260px,100%)}
+.actions-bar{margin:0!important;flex-shrink:0;padding-bottom:2px}.manual{background:var(--yellow)!important;color:#0645ad!important;font-weight:700}
+.actions{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0}.btn{border:0;border-radius:8px;padding:10px 14px;font-weight:700;cursor:pointer;background:#155eef;color:#fff}.btn.secondary{background:#e7edf5;color:#172033}.btn.danger{background:#b42318}.table-wrap{overflow:auto;border:1px solid var(--line);border-radius:8px}
+table{border-collapse:collapse;width:100%;min-width:1250px;background:#fff}th,td{padding:8px;border-bottom:1px solid var(--line);border-right:1px solid var(--line);text-align:right;white-space:nowrap}th{background:#eaf0f8;color:#20344d;font-size:12px;position:sticky;top:0;z-index:1}th:nth-child(-n+3),td:nth-child(-n+3){text-align:left}td input{width:100%;min-width:70px;border:1px solid #d4dce8;border-radius:5px;padding:7px;text-align:inherit}td .txt{min-width:170px;text-align:left}td .code{min-width:110px;text-align:left}td .num{min-width:78px}.calc{background:#f7f9fc;font-variant-numeric:tabular-nums}.total-row{background:#edf4ff;font-weight:700}.summary{display:grid;grid-template-columns:repeat(3,minmax(180px,1fr));gap:12px}.metric{padding:14px;border:1px solid var(--line);border-radius:9px;background:#fbfcfe}.metric small{display:block;color:var(--muted);margin-bottom:5px}.metric strong{font-size:19px;font-variant-numeric:tabular-nums}.metric.good{background:var(--green)}.metric.bad{background:var(--red)}.notes{color:#475569;font-size:12px}.notes li{margin:5px 0}
+@media(max-width:760px){.meta{grid-template-columns:repeat(2,minmax(130px,1fr))}.summary{grid-template-columns:1fr}.panel{padding:12px}header{padding:6px 16px}.field input{min-width:0}}
+@media print{body{background:#fff}header{background:#fff;color:#111;padding:0 0 6px}header p{color:#333}main{max-width:none;margin:0;padding:0}.panel{box-shadow:none;border:0;padding:8px 0}.actions{display:none}.table-wrap{overflow:visible}table{min-width:0;font-size:9px}th,td{padding:4px}td input{border:0;padding:0;background:transparent!important}.meta{grid-template-columns:repeat(4,1fr)}}
+
+.top-grid{display:grid;grid-template-columns:minmax(0,1fr) 360px;gap:14px;align-items:start;margin-bottom:12px}.top-left{min-width:0}.top-left .price-cards{margin-bottom:0}
+.note-card{background:#fff;border:1px solid var(--line);border-radius:10px;padding:12px 16px;box-shadow:0 1px 4px #1522380a;font-size:12px;color:#475569;align-self:stretch}.note-card strong{display:block;color:#172033;font-size:13px;margin-bottom:6px}.note-card ol{margin:0;padding-left:18px}.note-card li{margin:5px 0}
+@media(max-width:1100px){.top-grid{grid-template-columns:1fr}}
+@media print{.top-grid{grid-template-columns:minmax(0,1fr) 260px}}
+.inv{background:#fff;max-width:900px;margin:0 auto;font-family:Arial,Helvetica,sans-serif;color:#111}
+.inv-top{display:flex;justify-content:space-between;gap:16px;align-items:flex-start}.inv-sup{font-size:20px;font-weight:700}.inv-title{font-size:18px;font-weight:700}
+.inv input.ivx{border:0;border-bottom:1px dashed transparent;background:transparent;color:#0000ee;font:inherit;padding:1px 2px;min-width:0}.inv input.ivx:hover,.inv input.ivx:focus{border-bottom-color:#9aa8bd;outline:0;background:#f8fafc}
+.inv-meta{display:grid;grid-template-columns:1.2fr 1fr;gap:20px;margin-top:16px}.ir{display:flex;gap:8px;align-items:center;min-height:24px}.ir>span{width:100px;flex-shrink:0;font-weight:700}.ir input{flex:1;width:100%}.ir b{color:#0000ee;font-weight:400;padding:1px 4px}.ir b.yl{background:#fff9a6}
+.inv-tbl{border:1px solid #111}.inv-tbl th{background:#1f4e78;color:#fff;border:1px solid #111;text-align:center;font-size:12px;position:static}.inv-tbl td{border:1px solid #111;padding:3px 6px;color:#0000ee}.inv-tbl td.k{color:#111}
+.inv-tot{margin:14px 0 0 auto;border-collapse:collapse;min-width:320px}.inv-tot td{border:1px solid #111;padding:3px 8px;text-align:right;font-weight:700}.inv-tot td:first-child{border:0;text-align:right;padding-right:14px}.inv-tot tr.gt td:last-child{background:#d9e1f2}
+@media(max-width:700px){.inv-meta{grid-template-columns:1fr}}
+.ivm{position:fixed;inset:0;background:rgba(15,23,42,.6);display:none;z-index:50;overflow:auto;padding:20px 12px}.ivm.on{display:block}.ivm-box{background:#fff;max-width:960px;margin:0 auto;border-radius:12px;padding:14px 22px 22px}.ivm-bar{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:12px;padding-bottom:10px;border-bottom:1px solid var(--line)}
+@media print{body.pi header,body.pi main>*:not(#invModal){display:none!important}body.pi .ivm{position:static;background:none;padding:0;display:block}body.pi .ivm-box{max-width:none;padding:0}body.pi .ivm-bar,body.pi .ivhide{display:none}body.pi .inv input.ivx{border:0}}
+.price-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px;margin:12px 0 4px}
+.price-card{background:#fff;border:1px solid var(--line);border-radius:10px;padding:12px 14px;box-shadow:0 1px 4px #1522380a}
+.price-card .pc-code{font-size:11px;color:var(--muted);font-weight:700;margin-bottom:2px}
+.price-card .pc-desc{font-size:12px;color:#334155;margin-bottom:8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.price-card .pc-label{font-size:11px;color:var(--muted)}
+.price-card .pc-value{font-size:18px;font-weight:700;font-variant-numeric:tabular-nums;color:#0f172a}
+.price-card .pc-pcs{font-size:12px;color:#475569;margin-top:4px}
+.actions-bar{display:flex;align-items:center;justify-content:flex-end;gap:8px;margin:12px 0;position:relative}
+.menu-btn{border:0;border-radius:8px;padding:8px 12px;font-weight:700;cursor:pointer;background:#e7edf5;color:#172033;font-size:18px;line-height:1}
+.dropdown{position:absolute;right:0;top:100%;margin-top:4px;background:#fff;border:1px solid var(--line);border-radius:10px;box-shadow:0 8px 24px #15223822;min-width:200px;z-index:20;display:none;overflow:hidden}
+.dropdown.open{display:block}
+.dropdown button{display:block;width:100%;text-align:left;border:0;background:transparent;padding:12px 16px;font-size:14px;font-weight:600;color:#172033;cursor:pointer}
+.dropdown button:hover{background:#f1f5f9}
+.dropdown button.danger-item{color:#b42318}
+@media print{#savedPanel{display:none}.price-cards{break-inside:avoid}.actions-bar{display:none}}
+
+
+.tabbar{display:flex;align-items:flex-end;justify-content:flex-end;gap:8px;margin:0 0 10px;border-bottom:1px solid var(--line);padding:8px 0;position:sticky;top:0;z-index:15;background:var(--bg)}.tabbar .meta{flex:1;min-width:0;margin-right:6px;grid-template-columns:minmax(120px,1fr) minmax(120px,1fr) minmax(120px,1fr) minmax(120px,1fr)}.tabbar .meta .field input{min-width:0}.tabbar .tab-btn,.tabbar .menu-btn{align-self:flex-end}@media(max-width:900px){.tabbar{flex-wrap:wrap}.tabbar .meta{flex:1 1 100%;grid-template-columns:repeat(2,1fr)}}
+.tabbar .actions-bar{margin:0!important;padding:0}
+.tab-btn{border:0;border-radius:8px;padding:9px 14px;font-weight:700;cursor:pointer;background:#e7edf5;color:#172033}
+.tab-btn.active{background:#155eef;color:#fff}
+@media print{.tabbar{position:static;border:0;padding:0}.tabbar>button,.tabbar .actions-bar{display:none}}
+.thumb{height:44px;width:auto;max-width:90px;object-fit:cover;border-radius:5px;border:1px solid var(--line);cursor:pointer;vertical-align:middle}
+.pv{position:fixed;inset:0;background:rgba(0,0,0,.85);display:none;z-index:60;flex-direction:column}.pv.on{display:flex}
+.pv-top{display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:10px 14px;color:#fff}.pv-top b{flex:1;min-width:140px}
+.pv-box{flex:1;min-height:0;overflow:auto;text-align:center;padding:0 10px 14px}.pv-box img{max-width:100%;max-height:100%;cursor:zoom-in;background:#fff}.pv-box img.z{max-width:none;max-height:none;width:200%;cursor:zoom-out}
+@media print{.pv{display:none!important}}
+.lg{position:fixed;inset:0;background:#121821;display:none;z-index:70;align-items:center;justify-content:center;padding:16px}.lg.on{display:flex}
+.pin-wrap{width:100%;max-width:300px;text-align:center;color:#fff;font-family:Arial,Helvetica,sans-serif}.pin-title{font-size:19px;margin-bottom:4px}.pin-sub{color:#8b97a8;font-size:13px;margin-bottom:20px}
+.pin-dots{display:flex;justify-content:center;gap:14px;margin-bottom:8px}.pin-dots i{width:16px;height:16px;border-radius:50%;border:2px solid #5aa0ff;transition:background .1s}.pin-dots i.on{background:#5aa0ff}
+.pin-err{color:#ff7b72;font-size:13px;min-height:20px;margin-bottom:12px}.pin-pad{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.pin-pad button{height:60px;border-radius:12px;border:1px solid #2a3344;background:#1a2230;color:#fff;font-size:21px;font-weight:700;cursor:pointer;-webkit-tap-highlight-color:transparent;touch-action:manipulation}.pin-pad button:active{background:#2a3850}
+.pin-skip{margin-top:20px;background:none;border:0;color:#8b97a8;cursor:pointer;font-size:13px}
+@keyframes shk{0%,100%{transform:translateX(0)}25%{transform:translateX(-8px)}75%{transform:translateX(8px)}}.shake{animation:shk .3s}
+@media print{.lg{display:none!important}}
+/* ===== Dipasang sebagai tab di index.html: header disembunyikan + mode gelap (ikut tombol tema index) ===== */
+@media screen{header{display:none}}
+:root[data-theme="dark"]{color-scheme:dark;--bg:#0d1117;--panel:#161b22;--text:#e6edf3;--muted:#8b949e;--line:#30363d;--yellow:#3b3410;--green:#12261a;--red:#2a1618}
+@media screen{
+:root[data-theme="dark"] .field input{background:#0d1117;color:#e6edf3}
+:root[data-theme="dark"] table:not(.inv-tbl):not(.inv-tot){background:#0d1117}
+:root[data-theme="dark"] table:not(.inv-tbl) th{background:#1f2937;color:#e6edf3}
+:root[data-theme="dark"] .calc{background:#161b22}
+:root[data-theme="dark"] .total-row{background:#1c2a44;color:#9ecbff}
+:root[data-theme="dark"] td input{background:#0d1117;color:#e6edf3;border-color:#30363d}
+:root[data-theme="dark"] .manual{color:#7fb4ff!important}
+:root[data-theme="dark"] .btn.secondary,:root[data-theme="dark"] .tab-btn,:root[data-theme="dark"] .menu-btn{background:#1c2128;color:#e6edf3}
+:root[data-theme="dark"] .tab-btn.active{background:#1f6feb;color:#fff}
+:root[data-theme="dark"] .dropdown{background:#161b22;border-color:#30363d}
+:root[data-theme="dark"] .dropdown button{color:#e6edf3}
+:root[data-theme="dark"] .dropdown button:hover{background:#1c2128}
+:root[data-theme="dark"] .dropdown button.danger-item{color:#ff7b72}
+:root[data-theme="dark"] .metric,:root[data-theme="dark"] .note-card,:root[data-theme="dark"] .price-card{background:#161b22}
+:root[data-theme="dark"] .note-card,:root[data-theme="dark"] .notes,:root[data-theme="dark"] .price-card .pc-desc,:root[data-theme="dark"] .price-card .pc-pcs{color:#8b949e}
+:root[data-theme="dark"] .note-card strong,:root[data-theme="dark"] .price-card .pc-value{color:#e6edf3}
+:root[data-theme="dark"] .ivm-box .btn.secondary{background:#e7edf5;color:#172033}
+:root[data-theme="dark"] .ivm-bar{border-bottom-color:#d9e0ea}
+}
+</style>
+<input type="file" id="photoFile" accept="image/*" style="display:none">
+<div class="pv" id="pv"><div class="pv-top"><b id="pvTitle"></b>
+<button class="btn secondary" id="pvChange">📷 Ganti Foto</button><button class="btn danger" id="pvDel">Hapus Foto</button><button class="btn" id="pvClose">Tutup</button></div>
+<div class="pv-box"><img id="pvImg" alt="Foto sumber invoice"></div></div>
+<div class="lg" id="lg"><div class="pin-wrap"><div class="pin-title">🔒 <b>Masukkan PIN</b></div><div class="pin-sub">Data ini bersifat rahasia</div>
+<div class="pin-dots" id="pinDots"></div><div class="pin-err" id="lgErr"></div><div class="pin-pad" id="pinPad"></div><button class="pin-skip" id="lgSkip">Nanti</button></div></div>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.2/dist/umd/supabase.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js"></script>
+</head>
+<body>
+<header><p>Perhitungan Harga Beli Setelah Diskon — kalkulasi otomatis dan bisa dicetak</p></header>
+<main>
+<div class="tabbar">
+  <div class="meta view-calc"><div class="field"><label>Supplier</label><input id="supplier" value="PT. Fokus Ritel Indoprima"></div>
+    <div class="field"><label>Customer</label><input id="customer" value="Gajah Mas. CV - Kebumen"></div>
+    <div class="field"><label>No. Invoice</label><input id="invoice" value="IIF20260402426"></div>
+    <div class="field"><label>Tanggal Invoice</label><input id="date" value="20/04/2026"></div></div>
+  <button class="tab-btn active" id="tabCalc" onclick="showTab('calc')">Perhitungan</button>
+  <button class="tab-btn" id="tabSaved" onclick="showTab('saved')">Data Tersimpan <span id="tabCount"></span></button>
+  <button class="tab-btn" id="cloudBadge" onclick="cloudBadgeClick()" title="Status cloud (klik untuk sinkron / masuk)">☁</button>
+  <div class="actions-bar">
+      <button class="menu-btn" id="menuToggle" title="Menu" aria-label="Menu">⋮</button>
+      <div class="dropdown" id="actionsMenu">
+        <button onclick="document.getElementById('xlsFile').click();closeMenu()">📥 Impor dari Excel</button>
+        <button onclick="saveCurrent(true);closeMenu()">💾 Simpan Invoice Ini</button>
+        <button onclick="addRow();closeMenu()">＋ Tambah Barang</button>
+        <button onclick="document.getElementById('invoiceTotal').focus();closeMenu()">Isi Total Invoice</button>
+        <button onclick="window.print();closeMenu()">🖨 Cetak / Simpan PDF</button>
+        <button onclick="downloadCSV();closeMenu()">⬇ Ekspor CSV</button>
+        <button onclick="downloadAllCSV();closeMenu()">⬇ Ekspor Semua (CSV)</button>
+        <button onclick="backupJSON();closeMenu()">⬇ Backup</button>
+        <button onclick="document.getElementById('restoreFile').click();closeMenu()">⬆ Pulihkan Backup</button>
+        <button class="danger-item" onclick="resetItems();closeMenu()">Kosongkan Semua</button>
+      </div>
+    </div>
+</div>
+<section class="panel view-calc">
+  <div class="top-grid"><div class="top-left">
+  <div class="discount-row">
+    <div class="discount">
+      <div class="field"><label>Diskon 1 (Rp) — isi manual</label><input id="disc1" class="manual money" value="599929" inputmode="numeric"></div>
+      <div class="field"><label>Diskon 2 (Rp) — isi manual</label><input id="disc2" class="manual money" value="8250000" inputmode="numeric"></div>
+      <div class="field"><label>Total Diskon</label><input id="discTotal" readonly value="0"></div>
+    </div>
+    
+  </div>
+  <input type="file" id="xlsFile" accept=".xlsx,.xls,.csv" multiple style="display:none">
+  <div class="price-cards" id="priceCards"></div>
+  </div>
+  <aside class="note-card"><strong>Catatan penggunaan</strong><ol>
+<li>Diskon dibagi ke tiap barang secara proporsional terhadap nilai jumlah masing-masing barang.</li>
+<li>Harga invoice diasumsikan sudah termasuk PPN; PPN tidak ditambahkan lagi.</li>
+<li>Ubah kode, deskripsi, qty, isi per boks, harga, dan diskon sesuai invoice. Kolom hitungan akan otomatis berubah.</li>
+<li>Kolom kuning/huruf biru adalah input manual. Gunakan tombol Cetak / Simpan PDF untuk menyimpan laporan.</li>
+</ol></aside></div>
+  <div class="table-wrap"><table id="items">
+  <thead><tr><th>No</th><th>Kode Barang</th><th>Deskripsi</th><th>Qty (Boks)</th><th>Isi per Boks (pcs)</th><th>Harga/Boks (Rp)</th><th>Jumlah (Rp)</th><th>Porsi dari Total</th><th>Alokasi Diskon 1</th><th>Alokasi Diskon 2</th><th>Total Diskon</th><th>Jumlah Setelah Diskon</th><th>Harga Beli/Boks Setelah Diskon</th><th>Harga Beli/pcs Setelah Diskon</th><th>Aksi</th></tr></thead>
+  <tbody id="body"></tbody>
+  <tfoot><tr class="total-row"><td colspan="3">TOTAL</td><td id="totalQty">0</td><td></td><td></td><td id="totalGross">Rp 0</td><td id="totalShare">100%</td><td id="totalD1">Rp 0</td><td id="totalD2">Rp 0</td><td id="totalDisc">Rp 0</td><td id="totalNet">Rp 0</td><td></td><td></td><td></td></tr></tfoot>
+  </table></div>
+</section>
+<section class="panel view-calc">
+  <div class="summary">
+    <div class="metric"><small>Total invoice setelah diskon (hitungan)</small><strong id="computed">Rp 0</strong></div>
+    <div class="metric"><small>Total tertera di invoice (isi manual)</small><input id="invoiceTotal" class="manual money" value="559273071" inputmode="numeric" style="width:100%;font-size:19px;font-weight:700;padding:8px;border:1px solid #d9e0ea;border-radius:7px"></div>
+    <div class="metric" id="differenceBox"><small>Selisih (cek)</small><strong id="difference">Rp 0</strong><div id="diffLabel" class="notes">Isi total invoice untuk pengecekan.</div></div>
+  </div>
+</section>
+<section class="panel view-saved" id="savedPanel" style="display:none">
+  <div id="cloudBar" style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;background:#eef4ff;border:1px solid #c9dafc;border-radius:8px;padding:8px 12px;margin-bottom:12px">
+    <span id="cloudMsg" style="font-size:13px"></span>
+    <span style="display:flex;gap:8px"><button class="btn secondary" id="cloudSync" style="padding:6px 10px;display:none">☁ Sinkronkan ke Cloud</button><button class="btn" id="cloudLogin" style="padding:6px 10px">Masuk</button></span>
+  </div>
+  <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:10px">
+    <strong>Invoice Tersimpan <span id="savedCount" style="color:var(--muted);font-weight:400"></span></strong>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+      <span style="font-size:13px;color:var(--muted);font-weight:700">Simpan Excel:</span>
+      <button class="btn secondary" id="xlsAll" onclick="exportSavedXLSX(false)">📊 Semua</button>
+      <button class="btn secondary" id="xlsSel" onclick="exportSavedXLSX(true)" disabled style="opacity:.5">📊 Yang Dicentang (0)</button>
+    </div>
+    <input type="file" id="restoreFile" accept=".json" style="display:none">
+  </div>
+  <div class="table-wrap"><table id="savedTable" style="min-width:780px">
+    <thead><tr><th style="text-align:center;width:36px"><input type="checkbox" id="selAll" title="Centang semua"></th><th>No. Invoice</th><th>Tanggal</th><th>Customer</th><th>Total Setelah Diskon</th><th>Barang</th><th>Foto Sumber</th><th>Invoice</th><th>Aksi</th></tr></thead>
+    <tbody id="savedBody"></tbody>
+  </table></div>
+  <p class="notes">Invoice tersimpan di browser ini dan, bila sudah masuk (☁), juga di cloud Supabase (otomatis saat impor Excel). Jika No. Invoice sama, data lama ditimpa. Foto sumber invoice (tombol "Tambah") juga ikut tersimpan di cloud bila sudah masuk, dan ikut tersimpan di Backup. Gunakan Backup untuk cadangan atau pindah perangkat.</p>
+</section>
+<div class="ivm" id="invModal"><div class="ivm-box">
+  <div class="ivm-bar"><strong id="ivTitle"></strong><span style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn secondary" onclick="if(ivId)openPhoto(ivId)">📷 Foto Sumber</button><button class="btn secondary" onclick="printInvoice()">🖨 Cetak / PDF</button><button class="btn secondary" onclick="closeInvoice()">Tutup</button><button class="btn" onclick="processInvoice()">➡ Proses Hitung</button></span></div>
+  <div class="inv">
+    <div class="inv-top"><div><div class="inv-sup" id="ivSup"></div><input class="ivx" data-k="addr1" placeholder="Alamat baris 1" style="width:100%"><input class="ivx" data-k="addr2" placeholder="Alamat baris 2" style="width:100%"></div><div class="inv-title">INVOICE</div></div>
+    <div class="inv-meta">
+      <div class="inv-col">
+        <div class="ir"><span>Cust. Id</span><input class="ivx" data-k="custId"></div>
+        <div class="ir"><span>Customer</span><input class="ivx" data-k="custName" data-def="customer"></div>
+        <div class="ir"><span>Ship To</span><input class="ivx" data-k="shipTo" data-def="customer"></div>
+        <div class="ir"><span>NPWP</span><input class="ivx" data-k="npwp"></div>
+        <div class="ir"><span>TOP</span><input class="ivx" data-k="top"></div>
+        <div class="ir"><span>Due Date</span><input class="ivx" data-k="due"></div>
+      </div>
+      <div class="inv-col">
+        <div class="ir"><span>Invoice No.</span><b class="yl" id="ivNo"></b></div>
+        <div class="ir"><span>Invoice Date</span><b id="ivDate"></b></div>
+        <div class="ir"><span>Order No.</span><input class="ivx" data-k="order"></div>
+        <div class="ir"><span>PO No.</span><input class="ivx" data-k="po"></div>
+      </div>
+    </div>
+    <div class="table-wrap" style="margin-top:14px"><table class="inv-tbl" style="min-width:640px">
+      <thead><tr><th>No.</th><th>Kode Barang</th><th>Deskripsi</th><th>Qty (Boks)</th><th>Isi per Boks<br>(pcs)</th><th>Harga (IDR)</th><th>Jumlah (IDR)</th></tr></thead>
+      <tbody id="ivBody"></tbody>
+    </table></div>
+    <div id="ivCheck" class="ivhide" style="margin-top:14px;padding:10px 14px;border-radius:8px;font-size:13px;font-weight:700"></div>
+    <table class="inv-tot"><tr><td>Jumlah</td><td id="ivGross"></td></tr><tr><td>Discount 1</td><td id="ivD1"></td></tr><tr><td>Discount 2</td><td id="ivD2"></td></tr><tr class="gt"><td>Total Include PPN</td><td id="ivTotal"></td></tr></table>
+    <p class="notes ivhide" style="margin-top:10px">Isian biru (Cust. Id, NPWP, TOP, dst.) bisa diedit di sini dan otomatis tersimpan untuk invoice ini.</p>
+  </div>
+</div></div>
+</main>
+<script>
+const initial=[
+['010506000','FITRI Botol 24x200Ml',500,24,113000],
+['010508003','FITRI Botol Regular New x 12',1900,12,208800],
+['010508303','Minyak Goreng Fitri Botol kecil x12',900,12,110000],
+['020701200','Margarina FORVITA 60x200G',50,60,318060]
+];
+const body=document.getElementById('body');
+const fmt=n=>'Rp '+Math.round(Number(n)||0).toLocaleString('id-ID');
+const num=v=>{if(typeof v==='number')return v;return Number(String(v??'').replace(/[^\d-]/g,''))||0};
+function moneyInput(v, cls='num'){return `<input class="${cls} money" inputmode="numeric" value="${v}">`}
+function addRow(data=['','','',0,1,0]){
+ const tr=document.createElement('tr');
+ tr.innerHTML=`<td class="rowno"></td><td>${moneyInput(data[0]||'','code')}</td><td>${moneyInput(data[1]||'','txt')}</td><td>${moneyInput(data[2]||0)}</td><td>${moneyInput(data[3]||1)}</td><td>${moneyInput(data[4]||0)}</td><td class="calc gross">0</td><td class="calc share">0%</td><td class="calc d1">0</td><td class="calc d2">0</td><td class="calc dt">0</td><td class="calc net">0</td><td class="calc box">0</td><td class="calc pcs">0</td><td><button class="btn danger" style="padding:6px 8px" onclick="this.closest('tr').remove();calculate()">Hapus</button></td>`;
+ tr.querySelectorAll('input').forEach(i=>i.addEventListener('input',calculate));
+ body.appendChild(tr);calculate();
+}
+function rows(){return [...body.querySelectorAll('tr')].map(tr=>{let i=tr.querySelectorAll('input');return {tr,code:i[0].value,desc:i[1].value,qty:num(i[2].value),pack:num(i[3].value),price:num(i[4].value)}})}
+function calculate(){
+ const rs=rows(),grossTotal=rs.reduce((s,r)=>s+r.qty*r.price,0),d1=num(document.getElementById('disc1').value),d2=num(document.getElementById('disc2').value);
+ let sumD1=0,sumD2=0,sumNet=0,sumQty=0;
+ rs.forEach((r,idx)=>{
+  const gross=r.qty*r.price,share=grossTotal?gross/grossTotal:0;
+  const a1=Math.round(share*d1),a2=Math.round(share*d2),disc=a1+a2,net=gross-disc;
+  sumD1+=a1;sumD2+=a2;sumNet+=net;sumQty+=r.qty;
+  r.tr.querySelector('.rowno').textContent=idx+1;
+  r.tr.querySelector('.gross').textContent=fmt(gross);r.tr.querySelector('.share').textContent=(share*100).toLocaleString('id-ID',{maximumFractionDigits:2})+'%';
+  r.tr.querySelector('.d1').textContent=fmt(a1);r.tr.querySelector('.d2').textContent=fmt(a2);r.tr.querySelector('.dt').textContent=fmt(disc);r.tr.querySelector('.net').textContent=fmt(net);
+  r.tr.querySelector('.box').textContent=fmt(r.qty?net/r.qty:0);r.tr.querySelector('.pcs').textContent=fmt(r.pack?net/r.qty/r.pack:0);
+ });
+ document.getElementById('discTotal').value=fmt(d1+d2);
+ document.getElementById('totalQty').textContent=sumQty.toLocaleString('id-ID');document.getElementById('totalGross').textContent=fmt(grossTotal);
+ document.getElementById('totalShare').textContent=(grossTotal?100:0)+'%';document.getElementById('totalD1').textContent=fmt(sumD1);document.getElementById('totalD2').textContent=fmt(sumD2);
+ document.getElementById('totalDisc').textContent=fmt(sumD1+sumD2);document.getElementById('totalNet').textContent=fmt(sumNet);document.getElementById('computed').textContent=fmt(grossTotal-d1-d2);
+ const invoiceTotal=num(document.getElementById('invoiceTotal').value),diff=invoiceTotal-(grossTotal-d1-d2);
+ document.getElementById('difference').textContent=fmt(diff);
+ const box=document.getElementById('differenceBox');box.classList.toggle('good',invoiceTotal!==0&&diff===0);box.classList.toggle('bad',invoiceTotal!==0&&diff!==0);
+ document.getElementById('diffLabel').textContent=invoiceTotal===0?'Isi total invoice untuk pengecekan.':diff===0?'Cocok — tidak ada selisih.':(diff>0?'Total invoice lebih besar ':'Total invoice lebih kecil ')+fmt(Math.abs(diff))+'.';
+ renderPriceCards();
+}
+function resetItems(){
+  if(!confirm('Kosongkan SEMUA isian (supplier, customer, no. invoice, tanggal, diskon, total invoice, dan semua barang)?\n\nInvoice yang sudah disimpan di Data Tersimpan tidak ikut terhapus.'))return;
+  ['supplier','customer','invoice','date','disc1','disc2','invoiceTotal'].forEach(id=>{document.getElementById(id).value=''});
+  body.innerHTML='';calculate();
+  const f=document.getElementById('invoice');if(f)f.focus();
+}
+function downloadCSV(){
+ const headers=['No','Kode Barang','Deskripsi','Qty (Boks)','Isi per Boks (pcs)','Harga/Boks (Rp)','Jumlah (Rp)','Porsi dari Total','Alokasi Diskon 1','Alokasi Diskon 2','Total Diskon','Jumlah Setelah Diskon','Harga Beli/Boks Setelah Diskon','Harga Beli/pcs Setelah Diskon'];
+ const data=[headers,...rows().map((r,i)=>{let gross=r.qty*r.price,share=rows().reduce((s,x)=>s+x.qty*x.price,0)?gross/rows().reduce((s,x)=>s+x.qty*x.price,0):0;let a1=Math.round(share*num(document.getElementById('disc1').value)),a2=Math.round(share*num(document.getElementById('disc2').value)),net=gross-a1-a2;return [i+1,r.code,r.desc,r.qty,r.pack,r.price,gross,share,a1,a2,a1+a2,net,r.qty?net/r.qty:0,(r.qty&&r.pack)?net/r.qty/r.pack:0]})];
+ const csv=data.map(row=>row.map(x=>'"'+String(x??'').replaceAll('"','""')+'"').join(';')).join('\r\n');
+ const a=document.createElement('a');a.href=URL.createObjectURL(new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8;'}));a.download='RUMUSKU-FITRI.csv';a.click();URL.revokeObjectURL(a.href)
+}
+document.querySelectorAll('#disc1,#disc2,#invoiceTotal').forEach(i=>i.addEventListener('input',calculate));
+
+function renderPriceCards(){
+  const rs=rows();
+  const d1=num(document.getElementById('disc1').value),d2=num(document.getElementById('disc2').value);
+  const grossTotal=rs.reduce((s,r)=>s+r.qty*r.price,0);
+  const el=document.getElementById('priceCards');
+  if(!rs.length){el.innerHTML='';return}
+  el.innerHTML=rs.map(r=>{
+    const gross=r.qty*r.price,share=grossTotal?gross/grossTotal:0;
+    const a1=Math.round(share*d1),a2=Math.round(share*d2),net=gross-a1-a2;
+    const box=r.qty?net/r.qty:0, pcs=(r.qty&&r.pack)?net/r.qty/r.pack:0;
+    return `<div class="price-card">
+      <div class="pc-code">${r.code||'-'}</div>
+      <div class="pc-desc" title="${(r.desc||'').replace(/"/g,'&quot;')}">${r.desc||'(tanpa deskripsi)'}</div>
+      <div class="pc-label">Harga Beli/Boks Setelah Diskon</div>
+      <div class="pc-value">${fmt(box)}</div>
+      <div class="pc-pcs">/pcs: ${fmt(pcs)}</div>
+    </div>`;
+  }).join('');
+}
+
+function closeMenu(){document.getElementById('actionsMenu').classList.remove('open')}
+document.getElementById('menuToggle').addEventListener('click',e=>{
+  e.stopPropagation();
+  document.getElementById('actionsMenu').classList.toggle('open');
+});
+document.addEventListener('click',()=>closeMenu());
+
+function parseInvoiceWorkbook(wb){
+  const ws=wb.Sheets[wb.SheetNames[0]];
+  const grid=XLSX.utils.sheet_to_json(ws,{header:1,raw:true,defval:null,blankrows:true});
+  const norm=v=>String(v??'').toLowerCase().replace(/\s+/g,' ').trim();
+  const empty=v=>v===null||v===undefined||String(v).trim()==='';
+  const toNum=v=>{if(typeof v==='number')return v;const s=String(v??'').trim();if(!s)return 0;
+    const t=s.replace(/[^\d,.\-]/g,'');
+    if(/^-?\d{1,3}(\.\d{3})+(,\d+)?$/.test(t))return Number(t.replace(/\./g,'').replace(',','.'));
+    if(/^-?\d{1,3}(,\d{3})+(\.\d+)?$/.test(t))return Number(t.replace(/,/g,''));
+    return Number(t.replace(',','.'))||0};
+  const toDate=v=>{if(typeof v==='number'){const d=XLSX.SSF.parse_date_code(v);if(d)return String(d.d).padStart(2,'0')+'/'+String(d.m).padStart(2,'0')+'/'+d.y}return String(v??'').trim()};
+  const after=(row,c)=>{for(let k=c+1;k<row.length;k++)if(!empty(row[k]))return row[k];return null};
+  const find=(labels)=>{for(const row of grid)for(let c=0;c<row.length;c++){if(labels.includes(norm(row[c]))){const v=after(row,c);if(v!==null)return v}}return null};
+  const out={items:[]};
+  out.supplier=grid.length?(grid.slice(0,4).flat().find(v=>/^pt\.?\s/i.test(String(v??'')))||null):null;
+  out.customer=find(['ship to'])??find(['customer']);
+  out.invoice=find(['invoice no.','invoice no','no. invoice']);
+  const dv=find(['invoice date','tanggal invoice']);out.date=dv===null?null:toDate(dv);
+  const d1=find(['discount 1','diskon 1']),d2=find(['discount 2','diskon 2']);
+  out.d1=d1===null?0:Math.abs(toNum(d1));out.d2=d2===null?0:Math.abs(toNum(d2));
+  const tp=find(['total tercetak di invoice','total tertera di invoice','total include ppn']);
+  const tp2=find(['total tercetak di invoice','total tertera di invoice']);
+  out.total=(tp2!==null?toNum(tp2):(tp!==null?toNum(tp):0));
+  const X={};const gv=l=>{const v=find(l);return v===null?'':String(v).trim()};
+  X.custId=gv(['cust. id','cust id']);X.custName=gv(['customer']);X.shipTo=gv(['ship to']);X.npwp=gv(['npwp']);X.top=gv(['top']);
+  const dd=find(['due date']);X.due=dd===null?'':toDate(dd);X.order=gv(['order no.','order no']);X.po=gv(['po no.','po no']);
+  {let si=-1;grid.slice(0,6).forEach((row,r)=>{if(si<0&&row.some(v=>/^pt\.?\s/i.test(String(v??''))))si=r});
+   if(si>=0){const ln=[1,2].map(k=>{const row=grid[si+k]||[];const v=row.find(v=>!empty(v));return v==null||/cust|invoice/i.test(String(v))?'':String(v).trim()});X.addr1=ln[0];X.addr2=ln[1]}}
+  out.x=X;
+  let hr=-1,col={};
+  for(let r=0;r<grid.length&&hr<0;r++){const row=grid[r];
+    if(row.some(v=>norm(v)==='kode barang')){hr=r;
+      row.forEach((v,c)=>{const n=norm(v);
+        if(n==='kode barang')col.code=c;
+        else if(n.startsWith('deskripsi'))col.desc=c;
+        else if(n.startsWith('qty'))col.qty=c;
+        else if(n.startsWith('isi'))col.pack=c;
+        else if(n.startsWith('harga'))col.price=c;});}}
+  if(hr<0)throw new Error('Tabel barang tidak ditemukan (kolom "Kode Barang" tidak ada).');
+  const guessPack=d=>{const s=String(d||'');let m=s.match(/(\d+)\s*[xX]\s*\d/);if(m)return Number(m[1]);m=s.match(/[xX]\s*(\d+)/);return m?Number(m[1]):1};
+  for(let r=hr+1;r<grid.length;r++){const row=grid[r];
+    const code=row[col.code],desc=row[col.desc];
+    if(empty(code)&&empty(desc))break;
+    const pack=col.pack!==undefined&&!empty(row[col.pack])?toNum(row[col.pack]):guessPack(desc);
+    out.items.push([String(code??'').trim(),String(desc??'').trim(),toNum(row[col.qty]),pack||1,toNum(row[col.price])]);}
+  if(!out.items.length)throw new Error('Tidak ada baris barang yang terbaca.');
+  return out;
+}
+
+
+function showTab(t){
+  document.querySelectorAll('.view-calc').forEach(e=>e.style.display=t==='calc'?'':'none');
+  document.getElementById('savedPanel').style.display=t==='saved'?'':'none';
+  document.getElementById('tabCalc').classList.toggle('active',t==='calc');
+  document.getElementById('tabSaved').classList.toggle('active',t==='saved');
+  if(t==='saved'){renderSaved();cloudPull()}
+}
+const STORE_KEY='rumusku_fitri_invoices';
+const esc=v=>String(v??'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');
+const escH=v=>String(v??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+function loadStore(){try{return JSON.parse(localStorage.getItem(STORE_KEY)||'{}')}catch(e){return {}}}
+function saveStore(o){try{localStorage.setItem(STORE_KEY,JSON.stringify(o));return true}catch(e){alert('Gagal menyimpan di browser: '+e.message+'\nGunakan tombol Backup.');return false}}
+let invX={};
+let ivId=null,ivDirty=false;
+function renderInvoice(d){
+  const n=v=>Math.round(Number(v)||0).toLocaleString('id-ID'),$=id=>document.getElementById(id),x=d.x||{};
+  $('ivSup').textContent=d.supplier;$('ivNo').textContent=d.invoice;$('ivDate').textContent=d.date;$('ivTitle').textContent='Invoice '+d.invoice;
+  document.querySelectorAll('#invModal .ivx').forEach(i=>{const k=i.dataset.k;i.value=x[k]!==undefined?x[k]:(i.dataset.def?d[i.dataset.def]||'':'')});
+  let g=0;$('ivBody').innerHTML=d.items.map((it,i)=>{const j=it[2]*it[4];g+=j;
+    return `<tr><td class="k" style="text-align:center">${i+1}</td><td>${escH(it[0])}</td><td>${escH(it[1])}</td><td style="text-align:right">${n(it[2])}</td><td style="text-align:right">${n(it[3])}</td><td style="text-align:right">${n(it[4])}</td><td class="k" style="text-align:right">${n(j)}</td></tr>`}).join('');
+  const ck=$('ivCheck'),calc=g-d.d1-d.d2,diff=(d.total||0)-calc;
+  if(!d.total){ck.style.cssText+=';background:#fff7e0;color:#92600a';ck.textContent='⚠ Total invoice dari Excel belum terisi. Cocokkan total ('+n(calc)+') dengan foto sumber secara manual.'}
+  else if(diff===0){ck.style.cssText+=';background:#e8f7ee;color:#116b36';ck.textContent='✓ Nominal cocok: total Excel Rp '+n(d.total)+' = hitungan Rp '+n(calc)+'.'}
+  else{ck.style.cssText+=';background:#fdecec;color:#b42318';ck.textContent='⚠ Nominal berbeda: total Excel Rp '+n(d.total)+' vs hitungan Rp '+n(calc)+' (selisih Rp '+n(Math.abs(diff))+'). Periksa dengan foto sumber sebelum diproses.'}
+  $('ivGross').textContent=n(g);$('ivD1').textContent=n(d.d1);$('ivD2').textContent=n(d.d2);$('ivTotal').textContent=n(g-d.d1-d.d2);
+}
+function processInvoice(){const id=ivId,d=loadStore()[id];if(!d)return;closeInvoice();applyImport(d);showTab('calc');window.scrollTo({top:0,behavior:'smooth'})}
+function openInvoice(id){const d=loadStore()[id];if(!d)return;ivId=id;ivDirty=false;renderInvoice(d);document.getElementById('invModal').classList.add('on');document.getElementById('invModal').scrollTop=0}
+function closeInvoice(){document.getElementById('invModal').classList.remove('on');if(ivId&&ivDirty)cloudPushInvoice(ivId);ivId=null;ivDirty=false}
+function printInvoice(){document.body.classList.add('pi');window.print()}
+window.addEventListener('afterprint',()=>document.body.classList.remove('pi'));
+document.getElementById('invModal').addEventListener('input',e=>{const k=e.target.dataset&&e.target.dataset.k;if(!k||!ivId)return;
+  const st=loadStore();if(!st[ivId])return;st[ivId].x=Object.assign({},st[ivId].x,{[k]:e.target.value});if(saveStore(st))ivDirty=true});
+document.getElementById('invModal').addEventListener('click',e=>{if(e.target.id==='invModal')closeInvoice()});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&ivId)closeInvoice()});
+function getState(){
+  const g=id=>document.getElementById(id).value;
+  return {x:Object.assign({},invX),supplier:g('supplier'),customer:g('customer'),invoice:g('invoice'),date:g('date'),
+    d1:num(g('disc1')),d2:num(g('disc2')),total:num(g('invoiceTotal')),
+    items:rows().map(r=>[r.code,r.desc,r.qty,r.pack,r.price])};
+}
+function netOf(d){return d.items.reduce((s,i)=>s+i[2]*i[4],0)-d.d1-d.d2}
+function saveCurrent(notify){
+  const d=getState();const id=(d.invoice||'').trim();
+  if(!id){alert('Isi No. Invoice dulu agar bisa disimpan.');return false}
+  const st=loadStore();const existed=!!st[id];d.savedAt=Date.now();st[id]=d;
+  if(!saveStore(st))return false;renderSaved();const pr=cloudPushInvoice(id);
+  if(notify)pr.then(ok=>alert('Invoice '+id+(existed?' diperbarui':' tersimpan')+(ok?' dan sudah masuk ke cloud ☁.':(window.cloudOn?' di perangkat ini, tetapi GAGAL diunggah ke cloud. Tekan "Sinkronkan ke Cloud" di tab Data Tersimpan.':' di perangkat ini SAJA. Masuk dengan PIN (tombol ☁) agar tersimpan di cloud.'))));
+  return true;
+}
+function applyImport(d){
+  invX=Object.assign({},d.x||{});
+  const set=(id,v)=>{if(v!==null&&v!==undefined&&v!=='')document.getElementById(id).value=v};
+  set('supplier',d.supplier);set('customer',d.customer);set('invoice',d.invoice);set('date',d.date);
+  document.getElementById('disc1').value=d.d1;document.getElementById('disc2').value=d.d2;
+  document.getElementById('invoiceTotal').value=d.total||0;
+  body.innerHTML='';d.items.forEach(it=>addRow([esc(it[0]),esc(it[1]),it[2],it[3],it[4]]));calculate();
+}
+/* ===== Foto sumber (IndexedDB) ===== */
+function phDB(){return new Promise((res,rej)=>{const r=indexedDB.open('rumusku_fitri_foto',1);r.onupgradeneeded=()=>r.result.createObjectStore('f');r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error)})}
+async function phTx(mode,fn){const db=await phDB();return new Promise((res,rej)=>{const t=db.transaction('f',mode),rq=fn(t.objectStore('f'));t.oncomplete=()=>{db.close();res(rq&&rq.result)};t.onerror=t.onabort=()=>{db.close();rej(t.error)}})}
+const phGet=id=>phTx('readonly',s=>s.get(id)),phSet=(id,v)=>phTx('readwrite',s=>s.put(v,id)),phDel=id=>phTx('readwrite',s=>s.delete(id));
+async function phAll(){try{const db=await phDB();return await new Promise((res,rej)=>{const out={},t=db.transaction('f','readonly'),c=t.objectStore('f').openCursor();c.onsuccess=()=>{const cur=c.result;if(cur){out[cur.key]=cur.value;cur.continue()}};t.oncomplete=()=>{db.close();res(out)};t.onerror=()=>{db.close();rej(t.error)}})}catch(e){return {}}}
+function shrink(file,max,q){return new Promise((res,rej)=>{const u=URL.createObjectURL(file),im=new Image();
+  im.onload=()=>{const k=Math.min(1,max/Math.max(im.naturalWidth,im.naturalHeight)),c=document.createElement('canvas');c.width=Math.round(im.naturalWidth*k);c.height=Math.round(im.naturalHeight*k);
+    const x=c.getContext('2d');x.fillStyle='#fff';x.fillRect(0,0,c.width,c.height);x.drawImage(im,0,0,c.width,c.height);URL.revokeObjectURL(u);res(c.toDataURL('image/jpeg',q))};
+  im.onerror=()=>{URL.revokeObjectURL(u);rej(new Error('File bukan gambar yang bisa dibaca browser.'))};im.src=u})}
+let photoTarget=null,savedToken=0;const selSaved=new Set();
+function updSel(){const b=document.getElementById('xlsSel'),n=selSaved.size;if(!b)return;b.textContent='📊 Yang Dicentang ('+n+')';b.disabled=!n;b.style.opacity=n?1:.5;
+  const rows=[...document.querySelectorAll('.selRow')],a=document.getElementById('selAll');if(a){a.checked=rows.length>0&&rows.every(r=>r.checked);a.indeterminate=n>0&&!a.checked}}
+document.addEventListener('change',e=>{const t=e.target;
+  if(t.id==='selAll'){document.querySelectorAll('.selRow').forEach(r=>{r.checked=t.checked;t.checked?selSaved.add(r.dataset.sel):selSaved.delete(r.dataset.sel)});updSel()}
+  else if(t.classList&&t.classList.contains('selRow')){t.checked?selSaved.add(t.dataset.sel):selSaved.delete(t.dataset.sel);updSel()}});
+function exportSavedXLSX(onlySel){const st=loadStore();let ids=Object.keys(st);if(onlySel)ids=ids.filter(i=>selSaved.has(i));
+  if(!ids.length){alert(onlySel?'Belum ada invoice yang dicentang.':'Belum ada invoice tersimpan.');return}
+  exportXLSX(ids.map(i=>st[i]),onlySel&&ids.length===1?'RUMUSKU-FITRI-'+ids[0].replace(/[^\w\-]/g,'')+'.xlsx':'RUMUSKU-FITRI-'+(onlySel?'invoice-terpilih':'semua-invoice')+'.xlsx')}
+async function renderSaved(){
+  const tk=++savedToken,st=loadStore(),ids=Object.keys(st).sort((a,b)=>(st[b].savedAt||0)-(st[a].savedAt||0));
+  document.getElementById('savedCount').textContent='('+ids.length+')';document.getElementById('tabCount').textContent='('+ids.length+')';
+  const ph=await phAll();if(tk!==savedToken)return;
+  document.getElementById('savedBody').innerHTML=ids.length?ids.map(id=>{const d=st[id],f=ph[id];
+    const foto=f?`<img class="thumb" src="${f.thumb||f.img}" data-view="${escH(id)}" alt="Foto" title="Klik untuk melihat">`:`<button class="btn secondary" style="padding:6px 10px" data-add="${escH(id)}">📷 Tambah</button>`;
+    return `<tr><td style="text-align:center"><input type="checkbox" class="selRow" data-sel="${escH(id)}"${selSaved.has(id)?' checked':''}></td><td style="text-align:left">${escH(id)}${window.cloudOn?(window.cloudIds&&window.cloudIds.has(id)?' <span title="Sudah tersimpan di cloud" style="color:#16a34a">☁✓</span>':' <span title="Belum terunggah ke cloud" style="color:#b42318">☁✗</span>'):''}</td><td style="text-align:left">${escH(d.date)}</td><td style="text-align:left">${escH(d.customer)}</td><td>${fmt(netOf(d))}</td><td>${d.items.length}</td><td style="text-align:center">${foto}</td><td style="text-align:center"><button class="btn secondary" style="padding:6px 10px" data-inv="${escH(id)}">🧾 Lihat</button></td><td><button class="btn" style="padding:6px 10px" data-open="${escH(id)}">Buka</button> <button class="btn danger" style="padding:6px 10px" data-del="${escH(id)}">Hapus</button></td></tr>`}).join('')
+    :'<tr><td colspan="9" style="text-align:center;color:#64748b">Belum ada invoice tersimpan.</td></tr>';
+  selSaved.forEach(i=>{if(!st[i])selSaved.delete(i)});updSel();
+}
+async function openPhoto(id){
+  let f=await phGet(id);if(!f){photoTarget=id;document.getElementById('photoFile').click();return}
+  if(!f.img){f=await cloudFullPhoto(id,f);if(!f||!f.img){alert('Foto belum bisa dimuat. Cek koneksi internet dan pastikan sudah masuk (login).');return}}
+  photoTarget=id;document.getElementById('pvTitle').textContent='Foto sumber — '+id;
+  const im=document.getElementById('pvImg');im.classList.remove('z');im.src=f.img;document.getElementById('pv').classList.add('on');
+}
+function closePhoto(){document.getElementById('pv').classList.remove('on');document.getElementById('pvImg').removeAttribute('src')}
+document.getElementById('pvClose').onclick=closePhoto;
+document.getElementById('pvImg').onclick=e=>e.target.classList.toggle('z');
+document.getElementById('pvChange').onclick=()=>document.getElementById('photoFile').click();
+document.getElementById('pvDel').onclick=async()=>{if(photoTarget&&confirm('Hapus foto sumber invoice '+photoTarget+'?')){await phDel(photoTarget);cloudRemovePhoto(photoTarget);closePhoto();renderSaved()}};
+document.getElementById('photoFile').addEventListener('change',async e=>{
+  const f=e.target.files[0];e.target.value='';if(!f||!photoTarget)return;
+  try{const img=await shrink(f,1600,.75),thumb=await shrink(f,160,.7);await phSet(photoTarget,{img,thumb,at:Date.now()});cloudPushPhoto(photoTarget);
+    if(document.getElementById('pv').classList.contains('on'))document.getElementById('pvImg').src=img;renderSaved()}
+  catch(err){alert('Gagal menyimpan foto: '+err.message)}
+});
+document.addEventListener('keydown',e=>{if(e.key==='Escape')closePhoto()});
+document.getElementById('savedBody').addEventListener('click',e=>{
+  const o=e.target.closest('[data-open]'),x=e.target.closest('[data-del]'),v=e.target.closest('[data-view]'),ad=e.target.closest('[data-add]'),st=loadStore();
+  if(v)openPhoto(v.dataset.view);
+  const iv=e.target.closest('[data-inv]');if(iv)openInvoice(iv.dataset.inv);
+  if(ad){photoTarget=ad.dataset.add;document.getElementById('photoFile').click()}
+  if(o&&st[o.dataset.open]){applyImport(st[o.dataset.open]);showTab('calc');window.scrollTo({top:0,behavior:'smooth'})}
+  if(x&&confirm('Hapus invoice '+x.dataset.del+' dari daftar tersimpan? (foto sumbernya ikut terhapus)')){const id=x.dataset.del;delete st[id];saveStore(st);cloudDelete(id);phDel(id).catch(()=>{}).then(renderSaved)}
+});
+
+function buildWorkbook(list){
+  const wb=new ExcelJS.Workbook(),used={};
+  const NUM='#,##0;\\(#,##0\\);\\-',DEC='#,##0.00;\\(#,##0.00\\);\\-',PCT='0.00%';
+  const thin={style:'thin'},BORDER={top:thin,left:thin,bottom:thin,right:thin};
+  const BLUE={argb:'FF0000FF'},YEL={type:'pattern',pattern:'solid',fgColor:{argb:'FFFFFF99'}},LB={type:'pattern',pattern:'solid',fgColor:{argb:'FFD9E1F2'}},HD={type:'pattern',pattern:'solid',fgColor:{argb:'FF1F4E78'}};
+  list.forEach((d,k)=>{
+    let nm=list.length===1?'Harga Beli':String(d.invoice||'Invoice '+(k+1)).replace(/[\\\/\?\*\[\]:]/g,'').slice(0,28)||'Invoice';
+    let u=nm,c=1;while(used[u])u=nm+'_'+(++c);used[u]=1;
+    const ws=wb.addWorksheet(u),n=d.items.length,first=13,last=12+n,tot=13+n;
+    const base={name:'Arial',size:10};
+    const set=(addr,v,o={})=>{const c=ws.getCell(addr);c.value=v;c.font=Object.assign({},base,o.font||{});if(o.fill)c.fill=o.fill;if(o.nf)c.numFmt=o.nf;if(o.border)c.border=o.border;if(o.al)c.alignment=o.al;return c};
+    [5,13,36,12,12,15,17,11,15,15,14,18,20,18].forEach((w,i)=>ws.getColumn(i+1).width=w);
+    set('A1','PERHITUNGAN HARGA BELI SETELAH DISKON',{font:{size:14,bold:true}});ws.getRow(1).height=17.25;
+    [['Supplier',d.supplier],['Customer',d.customer],['No. Invoice',d.invoice],['Tanggal Invoice',d.date],['TOP / Jatuh Tempo','']].forEach((r,i)=>{
+      set('A'+(3+i),r[0],{font:{bold:true}});set('C'+(3+i),r[1],{font:{color:BLUE}})});
+    set('A9','Diskon 1 (Rp)',{font:{bold:true}});set('C9',d.d1,{font:{color:BLUE},fill:YEL,nf:NUM});
+    set('A10','Diskon 2 (Rp)',{font:{bold:true}});set('C10',d.d2,{font:{color:BLUE},fill:YEL,nf:NUM});
+    set('E9','<- sel kuning/huruf biru = isi manual (diskon sesuai invoice)',{font:{color:{argb:'FF666666'}}});
+    ['No','Kode Barang','Deskripsi','Qty (Boks)','Isi per Boks (pcs)','Harga/Boks (Rp)','Jumlah (Rp)','Porsi dari Total','Alokasi Diskon 1','Alokasi Diskon 2','Total Diskon','Jumlah Setelah Diskon','HARGA BELI/BOKS Setelah Diskon','Harga Beli/pcs Setelah Diskon']
+      .forEach((h,i)=>set(String.fromCharCode(65+i)+'12',h,{font:{bold:true,color:{argb:'FFFFFFFF'}},fill:HD,border:BORDER,al:{horizontal:'center',vertical:'middle',wrapText:true}}));
+    ws.getRow(12).height=45;
+    const gt=d.items.reduce((s,i)=>s+i[2]*i[4],0);let sQ=0,sG=0,sH=0,sI=0,sJ=0,sK=0,sL=0;
+    d.items.forEach((i,x)=>{
+      const r=first+x,gross=i[2]*i[4],sh=gt?gross/gt:0,a1=sh*d.d1,a2=sh*d.d2,net=gross-a1-a2,box=i[2]?net/i[2]:0,pcs=i[3]?box/i[3]:0;
+      sQ+=i[2];sG+=gross;sH+=sh;sI+=a1;sJ+=a2;sK+=a1+a2;sL+=net;
+      set('A'+r,x+1,{border:BORDER});
+      set('B'+r,String(i[0]),{font:{color:BLUE},border:BORDER});set('C'+r,String(i[1]),{font:{color:BLUE},border:BORDER});
+      set('D'+r,i[2],{font:{color:BLUE},nf:NUM,border:BORDER});set('E'+r,i[3],{font:{color:BLUE},nf:NUM,border:BORDER});set('F'+r,i[4],{font:{color:BLUE},nf:NUM,border:BORDER});
+      set('G'+r,{formula:`D${r}*F${r}`,result:gross},{nf:NUM,border:BORDER});
+      set('H'+r,{formula:`IF($G$${tot}=0,0,G${r}/$G$${tot})`,result:sh},{nf:PCT,border:BORDER});
+      set('I'+r,{formula:`H${r}*$C$9`,result:a1},{nf:DEC,border:BORDER});
+      set('J'+r,{formula:`H${r}*$C$10`,result:a2},{nf:DEC,border:BORDER});
+      set('K'+r,{formula:`I${r}+J${r}`,result:a1+a2},{nf:NUM,border:BORDER});
+      set('L'+r,{formula:`G${r}-K${r}`,result:net},{nf:NUM,border:BORDER});
+      set('M'+r,{formula:`IF(D${r}=0,0,L${r}/D${r})`,result:box},{font:{bold:true},fill:LB,nf:DEC,border:BORDER});
+      set('N'+r,{formula:`IF(E${r}=0,0,M${r}/E${r})`,result:pcs},{nf:DEC,border:BORDER});
+    });
+    'ABCDEFGHIJKLMN'.split('').forEach(L=>set(L+tot,null,{font:{bold:true},fill:LB,border:BORDER}));
+    set('C'+tot,'TOTAL',{font:{bold:true},fill:LB,border:BORDER});
+    const sum=(L,v,nf)=>set(L+tot,{formula:`SUM(${L}${first}:${L}${last})`,result:v},{font:{bold:true},fill:LB,nf,border:BORDER});
+    sum('D',sQ,NUM);sum('G',sG,NUM);sum('H',sH,PCT);sum('I',sI,DEC);sum('J',sJ,DEC);sum('K',sK,NUM);sum('L',sL,NUM);
+    const comp=gt-d.d1-d.d2,t=tot+2;
+    set('C'+t,'Total invoice setelah diskon (hitungan)',{font:{bold:true}});set('G'+t,{formula:`G${tot}-C9-C10`,result:comp},{nf:DEC});
+    set('C'+(t+1),'Total tertera di invoice (isi manual)',{font:{bold:true}});set('G'+(t+1),d.total||null,{font:{color:BLUE},fill:YEL,nf:DEC});
+    set('C'+(t+2),'Selisih (cek)',{font:{bold:true}});set('G'+(t+2),{formula:`IF(G${t+1}="","",G${t+1}-G${t})`,result:d.total?d.total-comp:''},{nf:DEC});
+    const g={color:{argb:'FF444444'}},nr=t+4;
+    set('A'+nr,'CATATAN:',{font:{bold:true}});
+    ['1. Diskon dibagi ke tiap barang secara proporsional terhadap nilai (Jumlah) masing-masing barang.',
+     "2. Harga pada invoice diasumsikan sudah termasuk PPN (tertulis 'TOTAL INCLUDE PPN'), jadi tidak ditambah PPN lagi.",
+     `3. Isi per boks (${d.items.map(i=>i[3]).join(', ')}) diambil dari nama barang di invoice; ubah jika berbeda.`,
+     '4. Total di invoice diisi manual di sel kuning untuk pengecekan selisih.',
+     '5. Cara pakai ulang: ganti kode, deskripsi, qty, isi, harga (huruf biru) dan diskon; kolom lain otomatis. Tambah baris dengan menyisipkan baris di antara data lalu salin rumusnya.']
+     .forEach((x,i)=>set('A'+(nr+1+i),x,{font:g}));
+    ws.views=[{state:'frozen',xSplit:3,ySplit:12}];
+  });
+  return wb;
+}
+async function exportXLSX(list,fname){
+  if(typeof ExcelJS==='undefined'){alert('Library Excel belum termuat. Pastikan terhubung ke internet lalu muat ulang halaman.');return}
+  try{
+    const buf=await buildWorkbook(list).xlsx.writeBuffer();
+    downloadFile(fname,buf,'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+  }catch(err){alert('Gagal membuat file Excel: '+err.message)}
+}
+function exportCurrentXLSX(){const d=getState();if(!d.items.length){alert('Tabel barang masih kosong.');return}exportXLSX([d],'RUMUSKU-FITRI-'+(d.invoice||'invoice').replace(/[^\w\-]/g,'')+'.xlsx')}
+function exportAllXLSX(){const st=loadStore(),ids=Object.keys(st);if(!ids.length){alert('Belum ada invoice tersimpan.');return}exportXLSX(ids.map(i=>st[i]),'RUMUSKU-FITRI-semua-invoice.xlsx')}
+function downloadFile(name,content,type){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([content],{type}));a.download=name;a.click();URL.revokeObjectURL(a.href)}
+async function backupJSON(){const out=Object.assign({},loadStore()),fm=await phAll();if(Object.keys(fm).length)out.__fotos=fm;downloadFile('RUMUSKU-FITRI-backup.json',JSON.stringify(out),'application/json')}
+document.getElementById('restoreFile').addEventListener('change',async e=>{
+  const f=e.target.files[0];if(!f)return;
+  try{const data=JSON.parse(await f.text());if(typeof data!=='object'||Array.isArray(data))throw new Error('Format backup tidak valid.');
+    const fotos=data.__fotos||{};delete data.__fotos;const st=Object.assign(loadStore(),data);
+    if(saveStore(st)){for(const k in fotos){try{await phSet(k,fotos[k])}catch(_){}}renderSaved();cloudPushAll();alert('Backup dipulihkan: '+Object.keys(data).length+' invoice'+(Object.keys(fotos).length?', '+Object.keys(fotos).length+' foto.':'.'))}
+  }catch(err){alert('Gagal memulihkan: '+err.message)}
+  e.target.value='';
+});
+function downloadAllCSV(){
+  const st=loadStore(),ids=Object.keys(st);if(!ids.length){alert('Belum ada invoice tersimpan.');return}
+  const head=['No. Invoice','Tanggal','Customer','Kode Barang','Deskripsi','Qty (Boks)','Isi per Boks (pcs)','Harga/Boks (Rp)','Jumlah (Rp)','Alokasi Diskon 1','Alokasi Diskon 2','Jumlah Setelah Diskon','Harga Beli/Boks Setelah Diskon','Harga Beli/pcs Setelah Diskon'];
+  const out=[head];
+  ids.forEach(id=>{const d=st[id],gt=d.items.reduce((s,i)=>s+i[2]*i[4],0);
+    d.items.forEach(i=>{const gross=i[2]*i[4],sh=gt?gross/gt:0,a1=Math.round(sh*d.d1),a2=Math.round(sh*d.d2),net=gross-a1-a2;
+      out.push([id,d.date,d.customer,i[0],i[1],i[2],i[3],i[4],gross,a1,a2,net,i[2]?net/i[2]:0,(i[2]&&i[3])?net/i[2]/i[3]:0])})});
+  const csv=out.map(r=>r.map(x=>'"'+String(x??'').replaceAll('"','""')+'"').join(';')).join('\r\n');
+  downloadFile('RUMUSKU-FITRI-semua-invoice.csv','\ufeff'+csv,'text/csv;charset=utf-8;');
+}
+document.getElementById('xlsFile').addEventListener('change',async e=>{
+  const files=[...e.target.files];if(!files.length)return;
+  const ok=[],bad=[];
+  for(const f of files){
+    try{
+      if(typeof XLSX==='undefined')throw new Error('Library Excel belum termuat. Pastikan terhubung ke internet lalu muat ulang halaman.');
+      const d=parseInvoiceWorkbook(XLSX.read(await f.arrayBuffer(),{type:'array'}));
+      applyImport(d);
+      if(saveCurrent(false))ok.push((d.invoice||f.name)+' ('+d.items.length+' barang)');else bad.push(f.name+': tidak ada No. Invoice, tidak disimpan');
+    }catch(err){bad.push(f.name+': '+err.message)}
+  }
+  alert((ok.length?'Berhasil impor & simpan:\n- '+ok.join('\n- ')+'\n\nYang tampil di tabel: invoice terakhir. Cek Isi per Boks dan Selisih (cek).':'')+(bad.length?'\n\nGagal:\n- '+bad.join('\n- '):''));
+  showTab('calc');
+  e.target.value='';
+});
+renderSaved();
+
+initial.forEach(d=>addRow(d));
+calculate();
+</script>
+<script>
+/* ===== Supabase: login + sinkron data & foto ===== */
+const SB_EMAIL='rumusku@example.com'; // akun tunggal; PIN = password akun ini
+const SB_URL='https://lmcfacakevmribkddgbd.supabase.co',SB_KEY='sb_publishable_z9uA7UerhURPpslDmCgqkA_o1Xwmv0c',SB_BUCKET='foto-invoice';
+let sb=null,sbUser=null,pulling=false,askedLogin=false,lastErr='';
+window.cloudIds=new Set();window.cloudOn=false;
+const $=id=>document.getElementById(id);
+const fotoPath=id=>sbUser.id+'/'+id.replace(/[^\w\-]/g,'_')+'.jpg';
+/* antrean perubahan yang belum terunggah (aman dari kegagalan/offline) */
+const jget=(k,d)=>{try{return JSON.parse(localStorage.getItem(k))||d}catch(e){return d}};
+const dget=()=>Object.assign({inv:{},foto:{},del:{},fdel:{}},jget('rumusku_dirty',{}));
+const dsave=d=>localStorage.setItem('rumusku_dirty',JSON.stringify(d));
+function dmark(t,id){const d=dget();d[t][id]=1;dsave(d)}
+function dclear(t,id){const d=dget();delete d[t][id];dsave(d)}
+const dcount=()=>{const d=dget();return Object.keys(d.inv).length+Object.keys(d.foto).length+Object.keys(d.del).length+Object.keys(d.fdel).length};
+const kget=()=>new Set(jget('rumusku_known',[])),kset=s=>localStorage.setItem('rumusku_known',JSON.stringify([...s]));
+function cloudUI(msg){
+  const n=dcount();window.cloudOn=!!sbUser;
+  $('cloudMsg').textContent=msg||(sbUser?(n?'⚠ '+n+' perubahan belum terunggah ke cloud — tekan "Sinkronkan ke Cloud".':'☁ Tersinkron ke cloud'):(sb?'☁ Belum masuk. Data hanya di perangkat ini.':'☁ Mode offline (cloud tidak tersedia). Data hanya di perangkat ini.'));
+  $('cloudLogin').style.display=(!sbUser&&sb)?'':'none';$('cloudSync').style.display=sbUser?'':'none';
+  const bd=$('cloudBadge');if(bd){if(sbUser){bd.textContent=n?'☁ !':'☁ ✓';bd.style.color=n?'#b42318':'#16a34a'}else{bd.textContent=sb?'☁ Masuk':'☁ offline';bd.style.color=''}}
+}
+function cloudErr(where,e){lastErr=where+': '+((e&&e.message)||e);console.error(where,e);cloudUI('⚠ Gagal sinkron ('+lastErr+') — data tetap aman di perangkat ini.')}
+async function dataUrlToBlob(u){return await (await fetch(u)).blob()}
+function blobToDataUrl(b){return new Promise((r,j)=>{const f=new FileReader();f.onload=()=>r(f.result);f.onerror=()=>j(f.error);f.readAsDataURL(b)})}
+
+async function cloudPushInvoice(id){
+  dmark('inv',id);if(!sbUser){cloudUI();return false}
+  const d=loadStore()[id];if(!d){dclear('inv',id);return true}
+  try{const {error}=await sb.from('rumusku_invoices').upsert({user_id:sbUser.id,invoice_no:id,data:d,saved_at:d.savedAt||Date.now()},{onConflict:'user_id,invoice_no'});if(error)throw error;
+    dclear('inv',id);const k=kget();k.add(id);kset(k);window.cloudIds.add(id);cloudUI();renderSaved();return true}
+  catch(e){cloudErr('simpan invoice',e);return false}
+}
+async function cloudPushPhoto(id){
+  dmark('foto',id);if(!sbUser){cloudUI();return false}
+  const f=await phGet(id);if(!f||!f.img){dclear('foto',id);return true}
+  if(!(await cloudPushInvoice(id)))return false;
+  try{const path=fotoPath(id);
+    const up=await sb.storage.from(SB_BUCKET).upload(path,await dataUrlToBlob(f.img),{upsert:true,contentType:'image/jpeg'});if(up.error)throw up.error;
+    const {error}=await sb.from('rumusku_invoices').update({foto_path:path,thumb:f.thumb||null}).eq('invoice_no',id);if(error)throw error;
+    f.path=path;await phSet(id,f);dclear('foto',id);cloudUI();renderSaved();return true}
+  catch(e){cloudErr('unggah foto',e);return false}
+}
+async function cloudRemovePhoto(id){
+  dclear('foto',id);dmark('fdel',id);if(!sbUser){cloudUI();return false}
+  try{await sb.storage.from(SB_BUCKET).remove([fotoPath(id)]);
+    const {error}=await sb.from('rumusku_invoices').update({foto_path:null,thumb:null}).eq('invoice_no',id);if(error)throw error;dclear('fdel',id);cloudUI();return true}
+  catch(e){cloudErr('hapus foto',e);return false}
+}
+async function cloudDelete(id){
+  dclear('inv',id);dclear('foto',id);dclear('fdel',id);dmark('del',id);const k=kget();k.delete(id);kset(k);window.cloudIds.delete(id);
+  if(!sbUser){cloudUI();return false}
+  try{await sb.storage.from(SB_BUCKET).remove([fotoPath(id)]);
+    const {error}=await sb.from('rumusku_invoices').delete().eq('invoice_no',id);if(error)throw error;dclear('del',id);cloudUI();return true}
+  catch(e){cloudErr('hapus invoice',e);return false}
+}
+async function flushDirty(){
+  const d=dget();
+  for(const id of Object.keys(d.del))await cloudDelete(id);
+  for(const id of Object.keys(d.fdel))await cloudRemovePhoto(id);
+  for(const id of Object.keys(d.inv))await cloudPushInvoice(id);
+  for(const id of Object.keys(d.foto))await cloudPushPhoto(id);
+}
+async function cloudPushAll(){ // dipakai setelah Pulihkan Backup: unggah semua yang dipulihkan
+  if(!sbUser){cloudUI();return}
+  const st=loadStore();
+  for(const id of Object.keys(st)){await cloudPushInvoice(id);const f=await phGet(id);if(f&&f.img&&!f.path)await cloudPushPhoto(id)}
+}
+async function cloudFullPhoto(id,f){
+  if(!sbUser||!f.path)return f;
+  try{cloudUI('⏳ Memuat foto...');const {data,error}=await sb.storage.from(SB_BUCKET).download(f.path);if(error)throw error;
+    f.img=await blobToDataUrl(data);await phSet(id,f);cloudUI();return f}catch(e){cloudErr('muat foto',e);return null}
+}
+const SEL='invoice_no,data,saved_at,foto_path,thumb';
+async function cloudPull(){
+  if(!sbUser||pulling)return null;pulling=true;cloudUI('⏳ Menyinkronkan...');let res=null;
+  try{
+    await flushDirty();
+    let {data:rows,error}=await sb.from('rumusku_invoices').select(SEL);if(error)throw error;
+    const remote=new Set(rows.map(r=>r.invoice_no)),known=kget(),local=loadStore();let pushed=false;
+    for(const id of Object.keys(local)){
+      if(remote.has(id))continue;
+      if(known.has(id)){delete local[id];continue}          // pernah ada di cloud, kini dihapus dari perangkat lain
+      if(await cloudPushInvoice(id))pushed=true             // belum pernah terunggah: unggah, jangan dibuang
+    }
+    if(pushed){const r2=await sb.from('rumusku_invoices').select(SEL);if(r2.error)throw r2.error;rows=r2.data}
+    const d=dget(),st={},cur=loadStore();
+    rows.forEach(r=>{if(!d.del[r.invoice_no])st[r.invoice_no]=Object.assign({},r.data,{savedAt:r.saved_at||(r.data&&r.data.savedAt)||0})});
+    Object.keys(d.inv).forEach(id=>{if(cur[id])st[id]=cur[id]});   // perubahan lokal yang masih gagal terunggah tidak ditimpa
+    saveStore(st);
+    const ids=new Set(rows.map(r=>r.invoice_no));kset(ids);window.cloudIds=new Set(ids);
+    const lp=await phAll();
+    for(const k of Object.keys(lp))if(!ids.has(k))await phDel(k);
+    for(const r of rows){const id=r.invoice_no,l=lp[id];if(d.foto[id]||d.fdel[id])continue;
+      if(r.foto_path){const same=l&&l.path===r.foto_path;await phSet(id,{thumb:r.thumb||(l&&l.thumb)||null,img:same?l.img:null,path:r.foto_path,at:Date.now()})}
+      else if(l){if(l.img&&!l.path)await cloudPushPhoto(id);else await phDel(id)}}
+    await renderSaved();cloudUI();
+    res={invoices:rows.length,fotos:rows.filter(r=>r.foto_path).length};
+  }catch(e){cloudErr('ambil data',e)}
+  pulling=false;return res;
+}
+async function cloudSyncNow(){
+  if(!sb){alert('Cloud tidak tersedia (tidak ada koneksi internet atau pustaka Supabase gagal dimuat).');return}
+  if(!sbUser){openLogin();return}
+  while(pulling)await new Promise(r=>setTimeout(r,200));
+  lastErr='';const r=await cloudPull(),n=dcount();
+  if(r&&!n)alert('✅ Sinkron selesai.\nInvoice di cloud: '+r.invoices+'\nFoto di cloud: '+r.fotos);
+  else alert('⚠ Sinkron belum berhasil.\n'+(lastErr||'Periksa koneksi internet.')+'\n\nJika pesannya menyebut tabel/relation/bucket/policy, jalankan dulu script supabase-setup.sql di Supabase SQL Editor.');
+}
+function cloudBadgeClick(){if(!sb)cloudSyncNow();else if(!sbUser)openLogin();else{showTab('saved');cloudSyncNow()}}
+const PIN_LEN=6; // ubah ke 4 jika ingin PIN 4 angka (lihat catatan: password Supabase = PIN+"#rumusku")
+let pin='',pinBusy=false;
+const pinPw=p=>p.length>=6?p:p+'#rumusku';
+function pinDraw(){$('pinDots').innerHTML=Array.from({length:PIN_LEN},(_,i)=>'<i class="'+(i<pin.length?'on':'')+'"></i>').join('')}
+function pinBuild(){$('pinPad').innerHTML=['1','2','3','4','5','6','7','8','9','','0','⌫'].map(k=>k===''?'<span></span>':'<button data-k="'+k+'">'+k+'</button>').join('')}
+function openLogin(){window.focus();pin='';pinBusy=false;$('lgErr').textContent='';pinDraw();$('lg').classList.add('on')}
+function closeLogin(){$('lg').classList.remove('on')}
+async function pinKey(k){
+  if(pinBusy)return;
+  if(k==='⌫'){pin=pin.slice(0,-1);pinDraw();return}
+  if(pin.length>=PIN_LEN)return;pin+=k;pinDraw();$('lgErr').textContent='';
+  if(pin.length===PIN_LEN){pinBusy=true;
+    const {error}=await sb.auth.signInWithPassword({email:SB_EMAIL,password:pinPw(pin)});
+    if(error){$('lgErr').textContent=error.message==='Invalid login credentials'?'PIN salah.':error.message;const d=$('pinDots');d.classList.add('shake');setTimeout(()=>d.classList.remove('shake'),350);pin='';pinDraw();pinBusy=false;return}
+    pin='';pinBusy=false;closeLogin()}
+}
+$('pinPad').addEventListener('click',e=>{const b=e.target.closest('[data-k]');if(b)pinKey(b.dataset.k)});
+document.addEventListener('keydown',e=>{if(!$('lg').classList.contains('on'))return;if(/^\d$/.test(e.key))pinKey(e.key);else if(e.key==='Backspace')pinKey('⌫')});
+pinBuild();pinDraw();
+async function doLogout(){
+  const n=dcount();
+  if(!confirm((n?'⚠ Ada '+n+' perubahan yang BELUM terunggah ke cloud dan akan hilang jika keluar. Tekan Batal lalu "Sinkronkan ke Cloud" dulu.\n\n':'')+'Keluar? Data di perangkat ini akan dibersihkan (data tetap aman di cloud dan muncul lagi saat Anda masuk).'))return;
+  await sb.auth.signOut();saveStore({});for(const k of Object.keys(await phAll()))await phDel(k);
+  localStorage.removeItem('rumusku_dirty');localStorage.removeItem('rumusku_known');window.cloudIds=new Set();renderSaved();cloudUI();
+}
+$('lgSkip').onclick=closeLogin;$('cloudLogin').onclick=openLogin;$('cloudSync').onclick=cloudSyncNow;
+(function init(){
+  if(!window.supabase){cloudUI();return}
+  try{sb=window.supabase.createClient(SB_URL,SB_KEY)}catch(e){cloudUI();return}
+  sb.auth.onAuthStateChange((ev,sess)=>{ // jangan await panggilan supabase di dalam callback ini
+    const u=sess&&sess.user||null,changed=(u&&u.id)!==(sbUser&&sbUser.id);sbUser=u;cloudUI();
+    if(u&&changed)setTimeout(cloudPull,0);
+    if(!u&&ev==='INITIAL_SESSION'&&!askedLogin){askedLogin=true;setTimeout(openLogin,300)}
+  });
+  cloudUI();
+})();
+</script>
+</body>
+</html>
