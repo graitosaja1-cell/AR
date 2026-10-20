@@ -59,10 +59,16 @@
   :root[data-theme="light"] .theme-btn:hover { background: #334155; color: #e2e8f0; }
   :root[data-theme="light"] .mn-btn { color: #94a3b8; }
   :root[data-theme="light"] .mn-btn:hover, :root[data-theme="light"] .mn-btn.on { background: #334155; color: #e2e8f0; }
-  .theme-btn { margin-left: auto; display: inline-flex; align-items: center; gap: 6px; background: transparent;
+  .theme-btn { margin-left: 6px; display: inline-flex; align-items: center; gap: 6px; background: transparent;
     color: #94a3b8; border: none; padding: 6px 10px; font-size: .75rem; font-weight: 400; border-radius: 6px;
     cursor: pointer; transition: background .15s, color .15s; font-family: inherit; white-space: nowrap; }
   .theme-btn:hover { background: #334155; color: #e2e8f0; }
+  .last-dt { margin-left: auto; display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 6px;
+    font-size: .75rem; font-weight: 600; color: #cbd5e1; background: rgba(148,163,184,.14); border: 1px solid rgba(148,163,184,.28);
+    cursor: pointer; white-space: nowrap; }
+  .last-dt:hover { background: rgba(148,163,184,.25); }
+  .last-dt.warn { color: #fbbf24; background: rgba(251,191,36,.14); border-color: rgba(251,191,36,.45); }
+  .last-dt.none { color: #f87171; background: rgba(248,113,113,.12); border-color: rgba(248,113,113,.4); }
   .theme-btn i { font-size: .65rem; }
   .bk-ov{--bg:#fff;--tx:#1e293b;--mu:#64748b;--bd:#d6dde8;--pr:#1f4e8c;display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.55);align-items:center;justify-content:center;padding:12px}
   :root[data-theme=dark] .bk-ov{--bg:#161b22;--tx:#e6edf3;--mu:#8b949e;--bd:#30363d;--pr:#2f5fa8}
@@ -175,6 +181,7 @@
   <button class="main-tab" data-tab="stoksfa"><i class="fa-solid fa-boxes-stacked ic-orange"></i> Stok SFA</button>
   <button class="main-tab" data-tab="invoice"><i class="fa-solid fa-file-invoice-dollar ic-blue"></i> Invoice</button>
   <button class="main-tab" data-tab="neraca"><i class="fa-solid fa-scale-balanced ic-blue"></i> Neraca</button>
+  <span class="last-dt none" id="lastDt" title="Tanggal transaksi terakhir di data Penjualan (klik untuk buka tab Penjualan)">Data Penjualan: memuat…</span>
   <button class="theme-btn" id="themeBtn" title="Ganti mode gelap / terang (semua tab)"><i class="fa-regular fa-sun"></i> Terang</button>
   <div class="mn-wrap">
     <button class="mn-btn" id="mnBtn" title="Menu"><i class="fa-solid fa-bars"></i> Menu</button>
@@ -239,6 +246,29 @@ document.getElementById('themeBtn').addEventListener('click', () => {
 });
 document.querySelectorAll('.frames iframe').forEach(f => f.addEventListener('load', () => applyThemeAll(currentTheme())));
 applyThemeAll(currentTheme());
+
+/* ===== Penanda tanggal data Penjualan terakhir (semua hitungan bergantung pada data ini) ===== */
+function updateLastDt() {
+  const el = document.getElementById('lastDt'); if (!el) return;
+  let ms = 0;
+  try {
+    ms = document.getElementById('frame-penjualan').contentWindow.eval('(function(){var m=0;if(typeof rawData!=="undefined"&&rawData)for(var i=0;i<rawData.length;i++){if(rawData[i].Batal)continue;var v=rawData[i].TanggalMs||0;if(v>m)m=v}return m})()') || 0;
+  } catch (e) { ms = 0; }
+  el.classList.remove('warn', 'none');
+  if (!ms) { el.classList.add('none'); el.textContent = '⚠ Data Penjualan: belum ada'; return; }
+  const d = new Date(ms), now = new Date();
+  const days = Math.round((new Date(now.getFullYear(), now.getMonth(), now.getDate()) - new Date(d.getFullYear(), d.getMonth(), d.getDate())) / 86400000);
+  const hari = ['Minggu','Senin','Selasa','Rabu','Kamis','Jumat','Sabtu'][d.getDay()];
+  const tgl = hari + ', ' + String(d.getDate()).padStart(2,'0') + '/' + String(d.getMonth()+1).padStart(2,'0') + '/' + d.getFullYear();
+  const rel = days <= 0 ? 'hari ini' : days === 1 ? 'kemarin' : days + ' hari lalu';
+  if (days >= 2) el.classList.add('warn');
+  el.textContent = (days >= 2 ? '⚠ ' : '📅 ') + 'Data Penjualan terakhir: ' + tgl + ' (' + rel + ')';
+}
+document.getElementById('lastDt').addEventListener('click', () => openTab('penjualan'));
+try { new BroadcastChannel('laporan-data').onmessage = () => setTimeout(updateLastDt, 300); } catch (e) {}
+document.getElementById('frame-penjualan').addEventListener('load', () => setTimeout(updateLastDt, 800));
+setInterval(updateLastDt, 3000);
+setTimeout(updateLastDt, 1500);
 </script>
 <script>
 /* PWA: daftarkan service worker (hanya berjalan di https:// atau localhost) */
