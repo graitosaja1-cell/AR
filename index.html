@@ -220,7 +220,7 @@ document.getElementById('frame-cek').addEventListener('load', () => {
   setTimeout(() => { if (document.querySelector('.main-tab.active').dataset.tab === 'cek') openTab('cek'); }, 1500);
 });
 let start = 'penjualan';
-try { const s = localStorage.getItem('mainTab'); if (document.getElementById('frame-' + s)) start = s; } catch (e) {}
+/* selalu mulai dari tab Penjualan saat aplikasi dibuka */
 openTab(start);
 
 /* ===== MODE GELAP / TERANG untuk SEMUA tab ===== */
