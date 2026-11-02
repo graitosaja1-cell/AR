@@ -1,0 +1,2466 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Laporan Penjualan — Upload & Analisis</title>
+<script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
+<style>
+  :root {
+    --primary: #2F5496; --green: #548235; --orange: #C65911; --purple: #7030A0;
+    --navy: #1B3A5F; --table-header: #1f3b73; --table-header-sub: #1f3b73;
+    --bg: #f0f2f5; --card: #ffffff; --panel-soft: #f8f9fb; --hover-soft: #eef3fb;
+    --hover-row: #f5f8ff; --input-bg: #ffffff; --border: #d0d5dd; --text: #1a1a2e;
+    --muted: #667085; --row-start-bg: #f0f4fa; --total-row-bg: #FFF2CC;
+    --upload-hover: #eef3fb; --shadow-card: 0 1px 3px rgba(0,0,0,.12);
+    --shadow-menu: 0 6px 20px rgba(0,0,0,.18);
+    --header-grad: linear-gradient(135deg, #1F4E79, #2F5496);
+    color-scheme: light;
+  }
+  :root[data-theme="dark"] {
+    --primary: #58a6ff; --green: #56d364; --orange: #f0883e; --purple: #bc8cff;
+    --navy: #1f2937; --table-header: #1f2937; --table-header-sub: #1f2937;
+    --bg: #0d1117; --card: #161b22; --panel-soft: #1c2128; --hover-soft: #1c2128;
+    --hover-row: #1c2128; --input-bg: #0d1117; --border: #30363d; --text: #e6edf3;
+    --muted: #8b949e; --row-start-bg: #1c2128; --total-row-bg: #3a3020;
+    --upload-hover: #1c2128; --shadow-card: 0 1px 3px rgba(0,0,0,.5);
+    --shadow-menu: 0 6px 20px rgba(0,0,0,.6);
+    --header-grad: linear-gradient(135deg, #101826, #1c2b42); color-scheme: dark;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; }
+  body { font-family: 'Segoe UI', Arial, sans-serif; background: var(--bg); color: var(--text);
+    display: flex; flex-direction: column; overflow: hidden; transition: background .2s, color .2s; }
+  .header { background: var(--header-grad); color: white; padding: 2px 8px; display: none;
+    align-items: center; justify-content: flex-end; gap: 4px;
+    box-shadow: 0 1px 3px rgba(0,0,0,.12); position: relative; z-index: 100; flex-shrink: 0; }
+  .theme-toggle { background: rgba(255,255,255,.15); color: white; border: none;
+    padding: 2px 9px; font-size: .95rem; line-height: 1.1; border-radius: 4px;
+    cursor: pointer; transition: background .15s; }
+  .theme-toggle:hover { background: rgba(255,255,255,.3); }
+  .kebab-item { display: flex; align-items: center; gap: 8px; padding: 8px 14px;
+    font-size: .8rem; font-weight: 600; color: var(--text); cursor: pointer;
+    white-space: nowrap; transition: background .12s; }
+  .kebab-item:hover { background: var(--hover-soft); color: var(--primary); }
+  .kebab-item + .kebab-item { border-top: 1px solid var(--border); }
+  .kebab-item.danger { color: #dc2626; }
+  .kebab-item.danger:hover { background: #fee2e2; color: #b91c1c; }
+  :root[data-theme="dark"] .kebab-item.danger { color: #f87171; }
+  :root[data-theme="dark"] .kebab-item.danger:hover { background: #4a1e1e; color: #fca5a5; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: translateY(0); } }
+  .upload-zone { background: var(--card); border: 2px dashed var(--border); border-radius: 12px;
+    padding: 40px 24px; text-align: center; margin: 28px auto; max-width: 640px;
+    cursor: pointer; transition: border-color .2s, background .2s; }
+  .upload-zone:hover, .upload-zone.dragover { border-color: var(--primary); background: var(--upload-hover); }
+  .upload-zone .icon { font-size: 2.8rem; margin-bottom: 10px; }
+  .upload-zone p { color: var(--muted); font-size: .95rem; }
+  .upload-zone strong { color: var(--primary); }
+  #fileInput { display: none; }
+  .btn { display: inline-flex; align-items: center; gap: 5px; padding: 4px 10px;
+    border: none; border-radius: 6px; font-size: .78rem; font-weight: 600; cursor: pointer; }
+  .btn-outline { background: var(--input-bg); border: 1px solid var(--border); color: var(--text); }
+  .btn-outline:hover { background: var(--hover-soft); }
+  .filters { display: none; padding: 5px 10px; background: var(--card);
+    border-bottom: 1px solid var(--border); gap: 8px; flex-wrap: wrap; align-items: flex-end;
+    flex-shrink: 0; justify-content: flex-end; }
+  .filters label { font-size: .68rem; color: var(--muted); font-weight: 600;
+    display: block; margin-bottom: 1px; line-height: 1.1; }
+  .filters .fg { display: flex; flex-direction: column; }
+  .filters select, .filters input[type="date"], .filters input[type="text"], .filters input[type="month"] {
+    padding: 3px 8px; border: 1px solid var(--border); border-radius: 5px; font-size: .78rem;
+    background: var(--input-bg); color: var(--text); min-width: 110px; outline: none;
+    height: 26px; line-height: 1; transition: color .15s; }
+  .filters select:focus, .filters input:focus { border-color: var(--primary); }
+  .filters .search-box { min-width: 170px; }
+  .filters .btn-reset { height: 26px; padding: 3px 10px; font-size: .78rem; }
+  .filters select.is-empty, .filters input[type="date"].is-empty, .filters input[type="month"].is-empty { color: var(--muted); }
+  .filters .btn-group .pill:not(.active) { color: var(--muted); opacity: .8; }
+  .filters .btn-group .pill:not(.active):hover { color: var(--primary); opacity: 1; }
+  .btn-group { display: flex; border: 1px solid var(--border); border-radius: 5px;
+    overflow: hidden; height: 26px; background: var(--input-bg); }
+  .btn-group .pill { padding: 0 12px; font-size: .78rem; font-weight: 600;
+    background: var(--input-bg); color: var(--text); border: none; cursor: pointer;
+    transition: background .12s, color .12s, opacity .12s; line-height: 26px; outline: none; }
+  .btn-group .pill:hover { background: var(--hover-soft); color: var(--primary); }
+  .btn-group .pill.active { background: var(--primary); color: white; opacity: 1; }
+  .btn-group .pill.active:hover { background: var(--primary); opacity: .9; }
+  .tabs-bar { display: none; background: var(--card); flex-shrink: 0; align-items: stretch;
+    position: relative; }
+  .tabs-bar.show { display: flex; }
+  .tabs { display: flex; padding: 0 12px; overflow-x: auto; white-space: nowrap; flex: 1; min-width: 0; }
+  .tab { display: inline-block; padding: 10px 16px; font-size: .85rem; font-weight: 600;
+    color: var(--muted); cursor: pointer; border-bottom: 3px solid transparent;
+    user-select: none; transition: color .15s, border-color .15s; }
+  .tab:hover { color: var(--primary); }
+  .tab.active { color: var(--primary); border-bottom-color: var(--primary); }
+  .hamburger-wrap { position: relative; display: flex; align-items: center;
+    padding: 0 12px; background: var(--card); }
+  .hamburger-btn { background: var(--input-bg); border: 1px solid var(--border);
+    border-radius: 5px; padding: 3px 10px; font-size: 1rem; cursor: pointer;
+    line-height: 1.1; color: var(--text); font-weight: 700;
+    transition: background .12s, color .12s; }
+  .hamburger-btn:hover { background: var(--hover-soft); color: var(--primary); }
+  .hamburger-menu { display: none; position: absolute; right: 8px; top: calc(100% + 6px);
+    background: var(--card); border: 1px solid var(--border); border-radius: 8px;
+    box-shadow: var(--shadow-menu); min-width: 240px; z-index: 999; overflow: hidden;
+    animation: fadeIn .12s ease-out; }
+  .hamburger-menu.open { display: block; }
+  .content { display: none !important; padding: 0; flex: 1; min-height: 0;
+    flex-direction: column; overflow: hidden; }
+  .content.active { display: flex !important; }
+  .subfilter-bar { display: flex; align-items: center; gap: 10px; padding: 6px 12px;
+    flex-shrink: 0; background: linear-gradient(90deg, var(--hover-soft), var(--panel-soft));
+    border-bottom: 1px solid var(--border); flex-wrap: wrap; }
+  .subfilter-bar label { font-size: .74rem; font-weight: 700; color: var(--primary);
+    display: flex; align-items: center; gap: 4px; }
+  .subfilter-bar select { padding: 3px 8px; border: 1px solid var(--border); border-radius: 5px;
+    font-size: .78rem; background: var(--input-bg); color: var(--text); height: 26px;
+    outline: none; min-width: 240px; cursor: pointer; font-weight: 600; }
+  .subfilter-bar select:focus { border-color: var(--primary); }
+  .subfilter-bar .info { font-size: .72rem; color: var(--muted); }
+  .subfilter-bar .info strong { color: var(--primary); }
+  table { width: 100%; border-collapse: collapse; font-size: .8rem; background: var(--card); color: var(--text); }
+  thead th { background: var(--table-header); color: white; padding: 9px 10px; text-align: left;
+    font-weight: 600; position: sticky; top: 0; z-index: 2; white-space: nowrap;
+    border-right: 1px solid rgba(255,255,255,.2); }
+  thead th:last-child { border-right: none; }
+  thead tr.sub th { background: var(--table-header-sub); font-size: .78rem; }
+  tbody td { padding: 6px 10px; border-bottom: 1px solid var(--border); white-space: nowrap; }
+  tbody tr:hover { background: var(--hover-row); }
+  tbody tr.retur { background: #FCE4D6; color: #1a1a2e; }
+  :root[data-theme="dark"] tbody tr.retur { background: #4a2a17; color: #ffd7b5; }
+  tbody tr.faktur-start { border-top: 2px solid var(--border); }
+  tbody tr.faktur-start:not(.retur) td { background: var(--row-start-bg); }
+  tbody tr.total-row { background: var(--total-row-bg); font-weight: 700; }
+  :root[data-theme="dark"] tbody tr.total-row { color: #ffd666; }
+  .num { text-align: right; font-variant-numeric: tabular-nums; }
+  .center { text-align: center; }
+  .profit-cell { background: #C6EFCE; color: #1a1a2e; }
+  .loss-cell { background: #FFC7CE; color: #1a1a2e; }
+  :root[data-theme="dark"] .profit-cell { background: #1e4620; color: #b7f0b7; }
+  :root[data-theme="dark"] .loss-cell { background: #5c1e22; color: #ffb9bd; }
+  .note { font-size: .78rem; color: var(--muted); line-height: 1.5; padding: 6px 12px;
+    flex-shrink: 0; background: var(--bg); }
+  .loading { display: none; text-align: center; padding: 60px; color: var(--muted); }
+  .loading .spinner { width: 40px; height: 40px; border: 4px solid var(--border);
+    border-top-color: var(--primary); border-radius: 50%;
+    animation: spin .7s linear infinite; margin: 0 auto 14px; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .table-wrap { flex: 1; min-height: 0; max-height: none; overflow: auto;
+    border-radius: 0; border-left: none; border-right: none; }
+  .filter-count { font-size: .72rem; color: var(--muted); margin-left: 6px; align-self: center; }
+  .faktur-count { font-size: .74rem; font-weight: 700; color: var(--primary);
+    background: var(--input-bg); border: 1px solid var(--border); padding: 0 10px;
+    border-radius: 5px; height: 26px; line-height: 24px; display: inline-flex;
+    align-items: center; gap: 4px; white-space: nowrap; align-self: flex-end; }
+  .faktur-count strong { color: var(--text); font-weight: 700; }
+  .busy-bar { position: fixed; top: 0; left: 0; height: 3px; width: 0;
+    background: linear-gradient(90deg, var(--primary), #22c55e); z-index: 9999;
+    transition: width .2s, opacity .3s; opacity: 0; pointer-events: none; }
+  .busy-bar.active { opacity: 1; width: 70%; }
+  .busy-bar.done { width: 100%; opacity: 0; }
+  .toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(20px);
+    background: var(--navy); color: #fff; padding: 10px 20px; border-radius: 8px;
+    font-size: .82rem; font-weight: 600; box-shadow: 0 4px 16px rgba(0,0,0,.25);
+    z-index: 9999; opacity: 0; pointer-events: none; transition: opacity .25s, transform .25s;
+    max-width: 90vw; text-align: center; }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  /* ===== VIRTUAL TABLE ===== */
+  .vt-wrap { flex: 1; min-height: 0; overflow: auto; background: var(--card);
+    position: relative; }
+  .vt-table { width: 100%; border-collapse: collapse; font-size: .8rem; }
+  .vt-table thead th { background: var(--table-header); color: white;
+    padding: 9px 10px; text-align: left; font-weight: 600;
+    position: sticky; top: 0; z-index: 2; white-space: nowrap;
+    border-right: 1px solid rgba(255,255,255,.2); }
+  .vt-table thead th:last-child { border-right: none; }
+  .vt-table tbody td { padding: 4px 10px; border-bottom: 1px solid var(--border);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    max-width: 340px; height: 28px; box-sizing: border-box;
+    vertical-align: middle; }
+  .vt-table tbody tr:hover td { background: var(--hover-row); }
+  .vt-table tbody tr.retur td { background: #FCE4D6; color: #1a1a2e; }
+  :root[data-theme="dark"] .vt-table tbody tr.retur td {
+    background: #4a2a17; color: #ffd7b5; }
+  .vt-table tbody tr.faktur-start:not(.retur) td { background: var(--row-start-bg); }
+  .vt-table tbody tr.faktur-start td:first-child {
+    box-shadow: inset 3px 0 0 var(--primary); }
+  .vt-table tbody tr.total-row td { background: var(--total-row-bg); font-weight: 700; }
+  :root[data-theme="dark"] .vt-table tbody tr.total-row td { color: #ffd666; }
+  .vt-table tbody tr.vt-spacer td { padding: 0 !important; border: 0 !important;
+    line-height: 0; background: transparent !important; }
+  .vt-info { padding: 6px 12px; font-size: .72rem; color: var(--muted);
+    background: var(--bg); border-top: 1px solid var(--border); flex-shrink: 0; }
+  .vt-loading { padding: 40px; text-align: center; color: var(--muted); font-size: .85rem; }
+
+  /* ===== MODAL HAPUS PER BULAN ===== */
+  .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.5);
+    display: none; align-items: center; justify-content: center; z-index: 10000;
+    backdrop-filter: blur(2px); }
+  .modal-overlay.open { display: flex; }
+  .modal-box { background: var(--card); border-radius: 10px;
+    box-shadow: 0 20px 60px rgba(0,0,0,.4); width: 92%; max-width: 480px;
+    max-height: 90vh; overflow-y: auto; color: var(--text); border: 1px solid var(--border); }
+  .modal-header { display: flex; justify-content: space-between; align-items: center;
+    padding: 12px 18px; background: linear-gradient(135deg, #123C63, #2C6DA8);
+    color: #fff; font-weight: 700; font-size: .92rem; border-radius: 10px 10px 0 0; }
+  .modal-close { background: transparent; color: #fff; border: none;
+    font-size: 1.15rem; cursor: pointer; padding: 0 4px; line-height: 1; }
+  .modal-body { padding: 16px 18px; }
+  .modal-footer { display: flex; justify-content: flex-end; gap: 8px;
+    padding: 12px 18px; border-top: 1px solid var(--border); }
+  .modal-footer .btn { padding: 8px 16px; font-size: .82rem; border-radius: 5px;
+    font-weight: 600; cursor: pointer; border: 1px solid var(--border);
+    background: var(--input-bg); color: var(--text); }
+  .modal-footer .btn:hover { background: var(--hover-soft); }
+  .modal-footer .btn.danger { background: #dc2626; color: #fff; border-color: #dc2626; }
+  .modal-footer .btn.danger:hover { background: #b91c1c; border-color: #b91c1c; }
+  .modal-footer .btn.danger:disabled { background: #fca5a5; border-color: #fca5a5; cursor: not-allowed; }
+  .dm-hint { font-size: .82rem; color: var(--muted); margin-bottom: 12px; }
+  .dm-select-all { display: flex; align-items: center; gap: 8px;
+    padding: 6px 10px; margin-bottom: 6px;
+    border-bottom: 1px dashed var(--border);
+    font-size: .82rem; color: var(--primary); font-weight: 600; cursor: pointer; }
+  .dm-list { display: flex; flex-direction: column; gap: 4px;
+    max-height: 50vh; overflow-y: auto; }
+  .dm-item { display: flex; align-items: center; gap: 10px;
+    padding: 8px 12px; border-radius: 5px; cursor: pointer;
+    border: 1px solid var(--border); transition: background .12s; font-size: .84rem; }
+  .dm-item:hover { background: var(--hover-soft); }
+  .dm-item.checked { background: var(--hover-soft); border-color: var(--primary); }
+  .dm-item input[type=checkbox] { cursor: pointer; width: 15px; height: 15px; }
+  .dm-item .dm-lbl { flex: 1; color: var(--text); font-weight: 500; }
+  .dm-item .dm-cnt { font-size: .72rem; color: var(--muted);
+    background: var(--panel-soft); padding: 2px 8px; border-radius: 10px; font-weight: 600; }
+  .dm-empty { padding: 20px; text-align: center; color: var(--muted); font-size: .85rem; }
+  .header { display: none !important; }
+
+  /* ===== PER SALES SUMMARY TABLE ===== */
+  .ps-wrap { flex: 1; min-height: 0; overflow: auto; background: var(--card); }
+  .ps-title { padding: 10px 14px 4px; font-size: .95rem; font-weight: 700; color: var(--text); }
+  .ps-sub { padding: 0 14px 10px; font-size: .78rem; color: var(--muted); }
+  .ps-table { width: max-content; min-width: 100%; border-collapse: collapse; font-size: .78rem; }
+  .ps-table thead th {
+    background: #5B9BD5; color: #fff; padding: 7px 8px; text-align: center;
+    font-weight: 700; position: sticky; top: 0; z-index: 3; white-space: nowrap;
+    border: 1px solid #2F75B5; vertical-align: middle;
+  }
+  .ps-table thead th.ps-prod { text-align: left; background: #5B9BD5; min-width: 180px; position: sticky; left: 0; z-index: 4; }
+  .ps-table thead tr.ps-sales th { background: #2F5496; border-color: #1B3A5F; }
+  .ps-table thead th.ps-tot { background: #548235; border-color: #3F6325; }
+  .ps-table thead th.ps-info { background: #7030A0; border-color: #5A2580; }
+  .ps-table tbody td {
+    padding: 5px 8px; border: 1px solid var(--border); white-space: nowrap;
+    background: var(--card); color: var(--text);
+  }
+  .ps-table tbody td.ps-prod {
+    text-align: left; font-weight: 600; position: sticky; left: 0; z-index: 1;
+    background: var(--card); min-width: 180px;
+  }
+  .ps-table tbody td.num { text-align: right; font-variant-numeric: tabular-nums; }
+  .ps-table tbody td.center { text-align: center; }
+  .ps-table tbody tr:hover td { background: var(--hover-row); }
+  .ps-table tbody tr:hover td.ps-prod { background: var(--hover-row); }
+  .ps-table tbody tr.ps-total td {
+    background: #FFF2CC; font-weight: 700; border-top: 2px solid #1B3A5F;
+  }
+  :root[data-theme="dark"] .ps-table tbody tr.ps-total td { background: #3a3020; color: #ffd666; }
+  :root[data-theme="dark"] .ps-table thead th { background: #1f4e79; border-color: #163a5c; }
+  :root[data-theme="dark"] .ps-table thead tr.ps-sales th { background: #163a5c; }
+  :root[data-theme="dark"] .ps-table thead th.ps-tot { background: #2d5a1e; }
+  :root[data-theme="dark"] .ps-table thead th.ps-info { background: #4a2068; }
+  .ps-empty { padding: 40px; text-align: center; color: var(--muted); }
+
+  /* ===== FAKTUR NOMINAL 0 -> TRANSAKSI BATAL ===== */
+  .vt-table tbody tr.batal td { text-decoration: line-through; color: var(--muted) !important; background: var(--panel-soft) !important; }
+  .vt-table tbody tr.batal td:first-child { box-shadow: inset 3px 0 0 #94a3b8; }
+  a.fk0 { color: var(--primary); font-weight: 600; cursor: pointer; text-decoration: underline; text-underline-offset: 2px; }
+  .bt-info { font-size: .8rem; line-height: 1.5; padding: 8px 12px; border-radius: 6px; margin-bottom: 12px;
+    background: var(--panel-soft); border: 1px solid var(--border); color: var(--text); }
+  .bt-info.is-batal { border-color: #94a3b8; }
+  .bt-kv { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 8px 14px; margin-bottom: 12px; }
+  .bt-kv span { display: block; font-size: .68rem; color: var(--muted); }
+  .bt-kv b { font-size: .82rem; font-weight: 600; word-break: break-word; }
+  .bt-tw { overflow: auto; border: 1px solid var(--border); border-radius: 6px; margin-bottom: 12px; }
+  .bt-tw table { font-size: .78rem; }
+  .bt-tw th { position: static; }
+  .bt-tw tr.retur td { background: #FCE4D6; color: #1a1a2e; }
+  :root[data-theme="dark"] .bt-tw tr.retur td { background: #4a2a17; color: #ffd7b5; }
+  .bt-note { width: 100%; min-height: 52px; resize: vertical; padding: 6px 8px; border: 1px solid var(--border);
+    border-radius: 6px; font: inherit; font-size: .8rem; background: var(--input-bg); color: var(--text); }
+  .bt-lbl { font-size: .72rem; font-weight: 700; color: var(--muted); margin-bottom: 4px; display: block; }
+ /* header tabel seragam (samakan dgn tab Uang Masuk) */ table thead th,.vt-table thead th,thead tr.sub th,.ps-table thead th,.ps-table thead th.ps-prod,.ps-table thead tr.ps-sales th,.ps-table thead th.ps-tot,.ps-table thead th.ps-info{background:#1f3b73;border-color:#16305e;color:#fff} :root[data-theme=dark] table thead th,:root[data-theme=dark] .vt-table thead th,:root[data-theme=dark] thead tr.sub th,:root[data-theme=dark] .ps-table thead th,:root[data-theme=dark] .ps-table thead th.ps-prod,:root[data-theme=dark] .ps-table thead tr.ps-sales th,:root[data-theme=dark] .ps-table thead th.ps-tot,:root[data-theme=dark] .ps-table thead th.ps-info{background:#1f2937;border-color:#30363d;color:#fff} 
+  /* ===== DATA HARGA ===== */
+  .dh-bar{display:flex;align-items:flex-end;gap:8px;padding:8px 12px;flex-wrap:wrap;flex-shrink:0;background:var(--card);border-bottom:1px solid var(--border)}
+  .dh-bar>label{font-size:.68rem;font-weight:700;color:var(--muted);text-transform:uppercase;align-self:center}
+  .dh-in{height:28px;padding:3px 8px;border:1px solid var(--border);border-radius:6px;background:var(--input-bg);color:var(--text);font-size:.8rem;outline:none}
+  .dh-in:focus{border-color:var(--primary)}
+  .dh-search{min-width:270px}
+  .dh-btn{height:28px;padding:0 12px;border:1px solid var(--border);border-radius:6px;background:var(--hover-soft);color:var(--text);font-size:.78rem;font-weight:600;cursor:pointer}
+  .dh-btn:hover{background:var(--input-bg);border-color:var(--primary)}
+  .dh-sp{flex:1}
+  .dh-gear-wrap{position:relative}
+  .dh-pop{display:none;position:absolute;top:32px;left:0;z-index:50;min-width:190px;padding:8px;background:var(--card);border:1px solid var(--border);border-radius:8px;box-shadow:var(--shadow-menu)}
+  .dh-pop.open{display:block}
+  .dh-pop-t{font-size:.68rem;font-weight:700;color:var(--muted);text-transform:uppercase;padding:2px 4px 6px}
+  .dh-pop label{display:flex;align-items:center;gap:8px;padding:4px;font-size:.8rem;color:var(--text);font-weight:500;cursor:pointer}
+  .dh-title{padding:10px 14px 0;font-size:1.05rem;font-weight:700;color:var(--primary);flex-shrink:0}
+  .dh-meta{display:flex;justify-content:space-between;align-items:center;padding:8px 14px;font-size:.78rem;color:var(--muted);flex-shrink:0}
+  .dh-pager{display:flex;align-items:center;gap:6px}
+  .dh-pager button{width:34px;height:26px;border:1px solid var(--border);border-radius:6px;background:var(--input-bg);color:var(--text);cursor:pointer;font-weight:700}
+  .dh-pager button:disabled{opacity:.4;cursor:not-allowed}
+  .dh-wrap{flex:1;min-height:0;overflow:auto;background:var(--card);margin:0 14px 10px;border:1px solid var(--border)}
+  .dh-table{width:100%;border-collapse:collapse;font-size:.8rem}
+  .dh-table thead th{background:var(--table-header);color:#fff;padding:9px 10px;text-align:center;font-weight:700;position:sticky;top:0;z-index:2;white-space:nowrap;border:1px solid rgba(255,255,255,.18)}
+  .dh-table thead tr.dh-r2 th{top:var(--dh-h1,36px);background:#2f4a7a;font-size:.78rem}
+  :root[data-theme=dark] .dh-table thead tr.dh-r2 th{background:#2b3646}
+  .dh-table tbody td{padding:6px 10px;border:1px solid var(--border);white-space:nowrap;color:var(--text)}
+  .dh-table tbody tr:hover td{background:var(--hover-row)}
+  .dh-table td.num{text-align:right;font-variant-numeric:tabular-nums}
+  .dh-table td.center{text-align:center}
+  .dh-up{color:#dc2626;font-weight:600}
+  .dh-down{color:#16a34a;font-weight:600}
+  :root[data-theme=dark] .dh-up{color:#f87171}
+  :root[data-theme=dark] .dh-down{color:#56d364}
+  .db-sec-h{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:14px 14px 6px}
+  .db-sec-t{font-size:.95rem;font-weight:700;color:var(--text)}
+  .db-table{margin-bottom:10px}
+  .db-table tbody td.ps-prod{font-weight:600}
+</style>
+</head>
+<body>
+
+<div class="busy-bar" id="busyBar"></div>
+<div class="toast" id="toast"></div>
+
+<div class="header" id="topBar">
+  <button class="theme-toggle" id="themeToggle" onclick="toggleTheme()" title="Ganti tema">🌙</button>
+</div>
+
+<div id="uploadArea">
+  <div class="upload-zone" id="dropZone" onclick="document.getElementById('fileInput').click()">
+    <div class="icon">📁</div>
+    <p><strong>Klik untuk pilih file</strong> atau drag & drop Excel di sini</p>
+    <p style="margin-top:6px;font-size:.8rem">Format: .xlsx / .xls — optimal untuk 10.000–100.000 baris (virtual scrolling)</p>
+    <p style="margin-top:4px;font-size:.74rem;color:var(--muted)">💾 Data otomatis tersimpan di browser & akan dimuat ulang saat dibuka kembali</p>
+  </div>
+  <input type="file" id="fileInput" accept=".xlsx,.xls,.csv">
+</div>
+
+<div class="loading" id="loading"><div class="spinner"></div><p>Memproses data...</p></div>
+
+<div class="tabs-bar" id="tabsBar">
+  <div class="tabs" id="tabs">
+    <div class="tab active" data-tab="faktur">Faktur</div>
+    <div class="tab" data-tab="profitproduk">Profit Per Produk</div>
+    <div class="tab" data-tab="databulanan">Data Bulanan</div>
+    <div class="tab" data-tab="dataharga">Data Harga</div>
+  </div>
+  <div class="hamburger-wrap">
+    <button class="hamburger-btn" onclick="toggleHamburger(event)" title="Menu">☰</button>
+    <div class="hamburger-menu" id="hamburgerMenu">
+      <div class="kebab-item" onclick="saveExcelFiltered(); closeHamburger();">💾 &nbsp;Save Excel (sesuai filter)</div>
+      <div class="kebab-item" onclick="clearMonthFilter(); closeHamburger();">🗓️ &nbsp;Hapus Pilihan Bulan</div>
+      <div class="kebab-item" onclick="downloadAll(); closeHamburger();">⬇️ &nbsp;Download Semua</div>
+      <div class="kebab-item" onclick="downloadCurrent(); closeHamburger();">📄 &nbsp;Download Tab Ini</div>
+      <div class="kebab-item" onclick="openAddUpload(); closeHamburger();">📥 &nbsp;Tambah / Upload Bulan Lain</div>
+      <div class="kebab-item danger" onclick="openDeleteMonthModal(); closeHamburger();">🗑️ &nbsp;Hapus Data per Bulan</div>
+      <div class="kebab-item danger" onclick="clearSavedData(); closeHamburger();">🗑️ &nbsp;Hapus Data Tersimpan</div>
+    </div>
+  </div>
+</div>
+
+<div class="filters" id="filters">
+  <div class="fg">
+    <label>🔍 Cari cepat</label>
+    <input type="text" class="search-box" id="fSearch" placeholder="Produk / Customer / Faktur..." oninput="scheduleApplyFilters()">
+  </div>
+  <div class="fg">
+    <label>Pembayaran</label>
+    <div class="btn-group" id="fPayGroup">
+      <button type="button" class="pill active" data-val="">Semua</button>
+      <button type="button" class="pill" data-val="Cash">Cash</button>
+      <button type="button" class="pill" data-val="Tempo">Tempo</button>
+    </div>
+  </div>
+  <div class="fg">
+    <label>Sales</label>
+    <select id="fSales" onchange="applyFilters()"><option value="">Semua</option></select>
+  </div>
+  <div class="fg">
+    <label>Bulan</label>
+    <select id="fBulan" onchange="applyFilters()"><option value="">Semua</option></select>
+  </div>
+  <div class="fg">
+    <label>Tanggal</label>
+    <input type="date" id="fTanggal" onchange="applyFilters()">
+  </div>
+  <button class="btn btn-outline btn-reset" onclick="resetFilters()">Reset</button>
+  <span class="faktur-count" id="fakturCount" title="Jumlah faktur unik setelah filter">📄 Faktur: <strong>0</strong></span>
+  <span class="filter-count" id="filterCount"></span>
+</div>
+
+<div class="content active" id="panel-faktur"></div>
+<div class="content" id="panel-profitproduk"></div>
+<div class="content" id="panel-databulanan"></div>
+<div class="content" id="panel-dataharga"></div>
+
+<div class="modal-overlay" id="batalModal" onclick="if(event.target===this)closeBatalModal()">
+  <div class="modal-box" style="max-width: 760px;">
+    <div class="modal-header">
+      <span id="btTitle">Faktur</span>
+      <button class="modal-close" onclick="closeBatalModal()">✕</button>
+    </div>
+    <div class="modal-body" id="btBody"></div>
+    <div class="modal-footer" id="btFoot"></div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="deleteMonthModal" onclick="if(event.target===this)closeDeleteMonthModal()">
+  <div class="modal-box" style="max-width: 520px;">
+    <div class="modal-header">
+      <span>🗑️ Hapus Data per Bulan</span>
+      <button class="modal-close" onclick="closeDeleteMonthModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <p class="dm-hint">Centang bulan yang datanya ingin dihapus. Data bulan lain tetap tersimpan.</p>
+      <label class="dm-select-all">
+        <input type="checkbox" id="selectAllMonths" onchange="toggleSelectAllMonths(this.checked)">
+        <span>Pilih Semua</span>
+      </label>
+      <div class="dm-list" id="deleteMonthList"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeDeleteMonthModal()">Batal</button>
+      <button class="btn danger" id="btnConfirmDeleteMonths" disabled onclick="confirmDeleteMonths()">Hapus Terpilih</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ========== KONFIGURASI KATEGORI PRODUK ========== */
+const PRODUCT_GROUPS = [
+  { name: 'Produk Fitri',     keywords: ['FITRI', 'FITSI'], tabId: 'fitri',     tabLabel: 'Fitri' },
+  { name: 'Produk Rupa rupa', keywords: [],                 tabId: 'rupabrupa', tabLabel: 'Rupa Rupa' }
+];
+
+/* ========== STATE ========== */
+let payFilter = '';
+let rawData = [];
+let filteredData = [];
+let processed = null;
+let fileName = '';
+let currentTab = 'faktur';
+let periodLabel = '';
+
+/* Faktur yang ditandai BATAL manual (disimpan di browser, ikut Backup/Sync) */
+const BATAL_KEY = 'penjBatal';
+function loadBatal() { try { return JSON.parse(localStorage.getItem(BATAL_KEY) || '{}') || {}; } catch (e) { return {}; } }
+let BATAL = loadBatal();
+const batalKey = no => String(no || '').trim().toUpperCase();
+const isBatalNo = no => { const k = batalKey(no); return !!(k && BATAL[k]); };
+
+let renderVersion = 0;
+const renderedVersion = {};
+
+
+let _applyTimer = null;
+function scheduleApplyFilters() {
+  clearTimeout(_applyTimer);
+  _applyTimer = setTimeout(applyFilters, 250);
+}
+
+const busyBar = document.getElementById('busyBar');
+let _busyTimer = null;
+function showBusy() {
+  clearTimeout(_busyTimer);
+  busyBar.classList.remove('done');
+  busyBar.classList.add('active');
+}
+function hideBusy() {
+  busyBar.classList.add('done');
+  clearTimeout(_busyTimer);
+  _busyTimer = setTimeout(() => {
+    busyBar.classList.remove('active', 'done');
+    busyBar.style.width = '0';
+  }, 350);
+}
+
+let _toastTimer = null;
+function showToast(msg, duration) {
+  const el = document.getElementById('toast');
+  if (!el) return;
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(_toastTimer);
+  _toastTimer = setTimeout(() => el.classList.remove('show'), duration || 2500);
+}
+
+/* ========== NOTIFIKASI PERUBAHAN DATA (untuk tab Cek) ========== */
+let _bcNotify = null;
+function notifyDataChanged() {
+  try {
+    if (!_bcNotify && 'BroadcastChannel' in window) _bcNotify = new BroadcastChannel('laporan-data');
+    if (_bcNotify) _bcNotify.postMessage({ type: 'data-changed' });
+  } catch (e) {}
+}
+
+const IDB_NAME = 'laporan-penjualan-db';
+const IDB_STORE = 'data';
+const IDB_KEY = 'latest';
+function idbOpen() {
+  return new Promise((resolve, reject) => {
+    if (!('indexedDB' in window)) { reject(new Error('IndexedDB tidak tersedia')); return; }
+    const req = indexedDB.open(IDB_NAME, 1);
+    req.onupgradeneeded = e => { const db = e.target.result;
+      if (!db.objectStoreNames.contains(IDB_STORE)) db.createObjectStore(IDB_STORE); };
+    req.onsuccess = e => resolve(e.target.result);
+    req.onerror = e => reject(e.target.error);
+  });
+}
+async function idbSave(payload) {
+  const db = await idbOpen();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(IDB_STORE, 'readwrite');
+    tx.objectStore(IDB_STORE).put(payload, IDB_KEY);
+    tx.oncomplete = () => { db.close(); resolve(); };
+    tx.onerror = e => { db.close(); reject(e.target.error); };
+  });
+}
+async function idbLoad() {
+  const db = await idbOpen();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(IDB_STORE, 'readonly');
+    const req = tx.objectStore(IDB_STORE).get(IDB_KEY);
+    req.onsuccess = e => { db.close(); resolve(e.target.result); };
+    req.onerror = e => { db.close(); reject(e.target.error); };
+  });
+}
+async function idbClear() {
+  const db = await idbOpen();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(IDB_STORE, 'readwrite');
+    tx.objectStore(IDB_STORE).delete(IDB_KEY);
+    tx.oncomplete = () => { db.close(); resolve(); };
+    tx.onerror = e => { db.close(); reject(e.target.error); };
+  });
+}
+function saveToIDB() {
+  if (!('indexedDB' in window)) return;
+  idbSave({ rawData, fileName, savedAt: Date.now() })
+    .then(() => {
+      showToast('💾 Data tersimpan otomatis di browser', 2000);
+      notifyDataChanged();
+    })
+    .catch(e => { console.warn('[idb] save fail:', e); showToast('⚠️ Gagal menyimpan data', 2500); });
+}
+async function tryAutoLoad() {
+  if (!('indexedDB' in window)) return false;
+  try {
+    const saved = await idbLoad();
+    if (!saved || !saved.rawData || !saved.rawData.length) return false;
+    document.getElementById('uploadArea').style.display = 'none';
+    document.getElementById('loading').style.display = 'block';
+    await new Promise(r => setTimeout(r, 30));
+    const arr = saved.rawData;
+    for (let i = 0; i < arr.length; i++) {
+      const o = arr[i];
+      if (!(o.Tanggal instanceof Date)) o.Tanggal = parseTanggal(o.Tanggal);
+      precomputeRow(o);
+    }
+    arr.sort((a, b) => {
+      const da = b.TanggalMs - a.TanggalMs;
+      if (da !== 0) return da;
+      return a['No. Faktur'] < b['No. Faktur'] ? -1 : a['No. Faktur'] > b['No. Faktur'] ? 1 : 0;
+    });
+    rawData = arr;
+    fileName = saved.fileName || 'data_tersimpan.xlsx';
+    buildFilterOptions();
+    filteredData = defaultMonthFiltered();
+    initPayButtons();
+    processed = computeAll(filteredData);
+    bumpRenderVersion();
+    showUI();
+    notifyDataChanged();
+    showToast('📂 Data tersimpan dimuat (' + rawData.length.toLocaleString('id-ID') + ' baris)', 3000);
+    return true;
+  } catch (e) {
+    console.warn('[idb] load fail:', e);
+    document.getElementById('loading').style.display = 'none';
+    document.getElementById('uploadArea').style.display = 'block';
+    return false;
+  }
+}
+async function clearSavedData() {
+  const ok = confirm('Hapus data yang tersimpan di browser?\n\n• Data di IndexedDB akan dihapus permanen\n• Halaman akan kembali ke layar upload\n• Tindakan ini tidak bisa dibatalkan');
+  if (!ok) return;
+  try {
+    await idbClear();
+    notifyDataChanged();
+    showToast('🗑️ Data tersimpan berhasil dihapus', 2500);
+    resetApp(false);
+  } catch (e) { alert('Gagal menghapus data: ' + (e.message || e)); }
+}
+
+function applyTheme() {
+  const theme = localStorage.getItem('theme') || 'light';
+  document.documentElement.setAttribute('data-theme', theme);
+  const btn = document.getElementById('themeToggle');
+  if (btn) btn.textContent = theme === 'dark' ? '☀️' : '🌙';
+}
+function toggleTheme() {
+  const cur = document.documentElement.getAttribute('data-theme') || 'light';
+  const next = cur === 'dark' ? 'light' : 'dark';
+  localStorage.setItem('theme', next);
+  applyTheme();
+}
+applyTheme();
+
+function toggleHamburger(e) { e.stopPropagation(); document.getElementById('hamburgerMenu').classList.toggle('open'); }
+function closeHamburger() { const m = document.getElementById('hamburgerMenu'); if (m) m.classList.remove('open'); }
+function saveExcelFiltered() { if (!processed) { alert('Belum ada data.'); return; } downloadCurrent(); }
+function clearMonthFilter() { document.getElementById('fBulan').value = ''; applyFilters(); }
+
+function initPayButtons() {
+  const group = document.getElementById('fPayGroup');
+  group.querySelectorAll('.pill').forEach(btn => {
+    btn.onclick = () => {
+      group.querySelectorAll('.pill').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      payFilter = btn.getAttribute('data-val');
+      applyFilters();
+    };
+  });
+}
+
+document.addEventListener('click', function() { closeHamburger(); });
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') { closeHamburger(); closeDeleteMonthModal(); closeBatalModal(); }
+});
+
+const dropZone = document.getElementById('dropZone');
+const fileInput = document.getElementById('fileInput');
+dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('dragover'); });
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+dropZone.addEventListener('drop', e => {
+  e.preventDefault(); dropZone.classList.remove('dragover');
+  if (e.dataTransfer.files.length) handleFile(e.dataTransfer.files[0]);
+});
+fileInput.addEventListener('change', () => { if (fileInput.files.length) handleFile(fileInput.files[0]); });
+
+function makeRowKey(o) {
+  const d = (o.YMD || '').trim();
+  return [
+    d,
+    String(o['No. Faktur'] || '').trim().toUpperCase(),
+    String(o.Produk || '').trim().toUpperCase(),
+    String(o.Customer || '').trim().toUpperCase(),
+    String(o.Alamat || '').trim().toUpperCase(),
+    String(o.Sales || '').trim().toUpperCase(),
+    String(o.Pembayaran || '').trim().toUpperCase(),
+    String(o.Jumlah ?? ''),
+    String(o['Harga Beli'] ?? ''),
+    String(o['Harga Jual'] ?? ''),
+    String(o.Discount ?? ''),
+    String(o.Total ?? '')
+  ].join('|');
+}
+
+function mergeUploadedRows(existingRows, incomingRows) {
+  const merged = existingRows.slice();
+  const seen = new Set();
+  for (const row of merged) seen.add(makeRowKey(row));
+  let added = 0, duplicate = 0;
+  for (const row of incomingRows) {
+    const key = makeRowKey(row);
+    if (seen.has(key)) { duplicate++; continue; }
+    seen.add(key);
+    merged.push(row);
+    added++;
+  }
+  merged.sort((a, b) => {
+    const da = (b.TanggalMs || 0) - (a.TanggalMs || 0);
+    if (da !== 0) return da;
+    return String(a['No. Faktur'] || '').localeCompare(String(b['No. Faktur'] || ''));
+  });
+  return { data: merged, added, duplicate };
+}
+
+function handleFile(file) {
+  const previousCount = rawData.length;
+  const hadExistingData = previousCount > 0;
+
+  document.getElementById('uploadArea').style.display = 'none';
+  document.getElementById('loading').style.display = 'block';
+  showBusy();
+
+  const reader = new FileReader();
+  reader.onload = e => {
+    setTimeout(() => {
+      try {
+        const wb = XLSX.read(e.target.result, { type: 'array', cellDates: true });
+        const sheet = wb.Sheets[wb.SheetNames[0]];
+        const json = XLSX.utils.sheet_to_json(sheet, { defval: '' });
+        if (!json.length) throw new Error('File kosong');
+
+        const incoming = normalizeRows(json);
+        if (!incoming.length) throw new Error('Tidak ada baris transaksi yang valid.');
+
+        let result;
+        if (hadExistingData) {
+          result = mergeUploadedRows(rawData, incoming);
+          rawData = result.data;
+        } else {
+          rawData = incoming;
+          result = { data: rawData, added: rawData.length, duplicate: 0 };
+        }
+
+        fileName = hadExistingData
+          ? (fileName ? fileName + ' + ' + file.name : file.name)
+          : file.name;
+
+        buildFilterOptions();
+        filteredData = defaultMonthFiltered();
+        initPayButtons();
+        processed = computeAll(filteredData);
+        bumpRenderVersion();
+        showUI();
+        saveToIDB();
+        hideBusy();
+
+        if (hadExistingData) {
+          showToast(
+            '📥 Data ditambahkan: ' + result.added.toLocaleString('id-ID') +
+            ' baris. Duplikat dilewati: ' + result.duplicate.toLocaleString('id-ID') +
+            '. Total sekarang: ' + rawData.length.toLocaleString('id-ID') + ' baris.',
+            5000
+          );
+        } else {
+          showToast('💾 Data tersimpan: ' + rawData.length.toLocaleString('id-ID') + ' baris', 3000);
+        }
+      } catch (err) {
+        console.error(err);
+        hideBusy();
+        alert('Gagal membaca file: ' + err.message);
+        if (hadExistingData) {
+          document.getElementById('loading').style.display = 'none';
+          showUI();
+        } else {
+          resetApp(false);
+        }
+      }
+    }, 30);
+  };
+  reader.onerror = () => {
+    hideBusy();
+    alert('Gagal membaca file.');
+    if (hadExistingData) showUI();
+    else resetApp(false);
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function showUI() {
+  document.getElementById('loading').style.display = 'none';
+  document.getElementById('topBar').style.display = 'flex';
+  document.getElementById('filters').style.display = 'flex';
+  document.getElementById('tabsBar').classList.add('show');
+  document.querySelectorAll('.tab').forEach(tab => {
+    tab.onclick = function(e) { e.preventDefault(); switchTab(this); };
+  });
+  switchTo('faktur');
+  updateFilterCount();
+  updateFilterVisualState();
+}
+
+function resetApp(clearStorage) {
+  closeHamburger(); closeDeleteMonthModal();
+  rawData = []; filteredData = []; processed = null; fileName = ''; currentTab = 'faktur'; payFilter = '';
+  renderVersion = 0;
+  Object.keys(renderedVersion).forEach(k => delete renderedVersion[k]);
+  document.getElementById('uploadArea').style.display = 'block';
+  document.getElementById('loading').style.display = 'none';
+  document.getElementById('topBar').style.display = 'none';
+  document.getElementById('filters').style.display = 'none';
+  document.getElementById('tabsBar').classList.remove('show');
+  document.querySelectorAll('.content').forEach(c => { c.innerHTML = ''; c.classList.remove('active'); });
+  document.getElementById('panel-faktur').classList.add('active');
+  document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.getAttribute('data-tab') === 'faktur'));
+  document.getElementById('fPayGroup').querySelectorAll('.pill').forEach((b, i) => b.classList.toggle('active', i === 0));
+  fileInput.value = '';
+  resetFilters(true);
+  const fe = document.getElementById('fakturCount');
+  if (fe) fe.innerHTML = '📄 Faktur: <strong>0</strong>';
+  if (clearStorage && ('indexedDB' in window)) {
+    idbClear().then(() => notifyDataChanged()).catch(e => console.warn('[idb] clear fail:', e));
+  }
+}
+
+function openAddUpload() {
+  if (fileInput) {
+    fileInput.value = '';
+    fileInput.click();
+  }
+}
+
+function parseTanggal(v) {
+  if (v instanceof Date) return v;
+  if (typeof v === 'number') return new Date((v - 25569) * 86400 * 1000);
+  const s = String(v).trim();
+  if (!s) return new Date('');
+  if (/^\d{4}-\d{2}-\d{2}/.test(s)) return new Date(s + 'T00:00:00');
+  const m = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})/);
+  if (m) return new Date(Number(m[3]), Number(m[2]) - 1, Number(m[1]));
+  return new Date(s);
+}
+
+function precomputeRow(o) {
+  const d = o.Tanggal;
+  if (d instanceof Date && !isNaN(d)) {
+    o.TanggalMs = d.getTime();
+    o.BulanKey  = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
+    o.YMD       = o.BulanKey + '-' + String(d.getDate()).padStart(2, '0');
+  } else { o.TanggalMs = 0; o.BulanKey = ''; o.YMD = ''; }
+  o.GroupName = getProductGroup(o.Produk);
+  o.Batal = isBatalNo(o['No. Faktur']);
+  o.Haystack  = (o.Produk + ' ' + o.Customer + ' ' + o['No. Faktur'] + ' ' +
+                 o.Alamat + ' ' + o.Sales + ' ' + o.Pembayaran).toLowerCase();
+}
+
+/* Parser angka toleran */
+function toNum(v) {
+  if (v == null || v === '') return 0;
+  if (typeof v === 'number') return isFinite(v) ? v : 0;
+  let s = String(v).trim();
+  if (!s) return 0;
+  s = s.replace(/[^\d.,\-]/g, '');
+  if (!s) return 0;
+  const hasDot   = s.indexOf('.') !== -1;
+  const hasComma = s.indexOf(',') !== -1;
+  if (hasDot && hasComma) {
+    if (s.lastIndexOf(',') > s.lastIndexOf('.')) s = s.replace(/\./g, '').replace(',', '.');
+    else s = s.replace(/,/g, '');
+  } else if (hasComma) {
+    s = s.replace(',', '.');
+  } else if (hasDot) {
+    const parts = s.split('.');
+    if (parts.length > 2) s = s.replace(/\./g, '');
+    else if (parts[1].length === 3 && parts[0].length <= 3) s = s.replace('.', '');
+  }
+  const n = Number(s);
+  return isFinite(n) ? n : 0;
+}
+
+function normalizeRows(rows) {
+  const map = {
+    'tanggal': 'Tanggal', 'no. faktur': 'No. Faktur', 'no faktur': 'No. Faktur', 'nofaktur': 'No. Faktur',
+    'produk': 'Produk', 'jumlah': 'Jumlah', 'qty': 'Jumlah', 'satuan': 'Satuan',
+    'harga beli': 'Harga Beli', 'discount': 'Discount', 'diskon': 'Discount', 'disc': 'Discount',
+    'harga jual': 'Harga Jual', 'total': 'Total', 'sales': 'Sales',
+    'customer': 'Customer', 'kd customer': 'Kd Customer', 'kode customer': 'Kd Customer',
+    'alamat': 'Alamat', 'pembayaran': 'Pembayaran'
+  };
+  const out = [];
+  for (let i = 0; i < rows.length; i++) {
+    const r = rows[i];
+    const o = {};
+    for (const k in r) {
+      if (!Object.prototype.hasOwnProperty.call(r, k)) continue;
+      const key = map[String(k).trim().toLowerCase()] || k;
+      o[key] = r[k];
+    }
+    o.Jumlah        = toNum(o.Jumlah);
+    o['Harga Beli'] = toNum(o['Harga Beli']);
+    o['Harga Jual'] = toNum(o['Harga Jual']);
+    o.Discount      = toNum(o.Discount);
+    o.Total         = toNum(o.Total);
+    o.HPP = o['Harga Beli'] * o.Jumlah;
+    o.Profit = o.Total - o.HPP;
+    o.Tanggal = parseTanggal(o.Tanggal);
+    o.Sales = String(o.Sales || '').trim();
+    o.Produk = String(o.Produk || '').trim();
+    o.Pembayaran = String(o.Pembayaran || '').trim();
+    o.Customer = String(o.Customer || '').trim();
+    o.Alamat = String(o.Alamat || '').trim();
+    o.Satuan = String(o.Satuan || '').trim();
+    o['No. Faktur'] = String(o['No. Faktur'] || '').trim();
+    if (!o.Produk) continue;
+    precomputeRow(o);
+    out.push(o);
+  }
+  out.sort((a, b) => {
+    const da = b.TanggalMs - a.TanggalMs;
+    if (da !== 0) return da;
+    return a['No. Faktur'] < b['No. Faktur'] ? -1 : a['No. Faktur'] > b['No. Faktur'] ? 1 : 0;
+  });
+  return out;
+}
+
+function defaultMonthKey() {
+  /* bulan terkini: bulan kalender sekarang bila ada datanya, jika tidak bulan terakhir yang ada di data */
+  const keys = new Set();
+  for (let i = 0; i < rawData.length; i++) if (rawData[i].BulanKey) keys.add(rawData[i].BulanKey);
+  if (!keys.size) return '';
+  const d = new Date(), cur = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
+  return keys.has(cur) ? cur : [...keys].sort().pop();
+}
+
+function defaultMonthFiltered() {
+  /* Tampilan awal tab Penjualan = bulan terkini (bukan semua bulan). Tab Cek membaca rawData langsung,
+     jadi hitungannya tidak terpengaruh. Pilih "Semua" pada filter Bulan untuk melihat seluruh bulan. */
+  const sel = document.getElementById('fBulan');
+  const key = defaultMonthKey();
+  if (sel) { sel.value = key; updateFilterVisualState(); }
+  return key ? rawData.filter(r => r.BulanKey === key) : rawData.slice();
+}
+
+function defaultMonthFiltered_OLD() {
+  /* BASIS PERHITUNGAN: saat aplikasi pertama dibuka, jangan diam-diam
+     menyempitkan dataset ke bulan terakhir. Semua tab harus mulai dari
+     sumber data yang sama. Filter bulan hanya diterapkan bila user memilihnya. */
+  const sel = document.getElementById('fBulan');
+  if (sel) sel.value = '';
+  return rawData.slice();
+}
+
+function buildFilterOptions() {
+  const salesSet = new Set();
+  const months = {};
+  for (let i = 0; i < rawData.length; i++) {
+    const r = rawData[i];
+    if (r.Sales) salesSet.add(r.Sales);
+    if (r.BulanKey && !months[r.BulanKey]) {
+      months[r.BulanKey] = r.Tanggal.toLocaleDateString('id-ID', { month: 'long', year: 'numeric' });
+    }
+  }
+  const sales = [...salesSet].sort();
+  const selSales = document.getElementById('fSales');
+  selSales.innerHTML = '<option value="">Semua</option>' + sales.map(s => '<option value="' + s + '">' + s + '</option>').join('');
+  const selBulan = document.getElementById('fBulan');
+  selBulan.innerHTML = '<option value="">Semua</option>' + Object.keys(months).sort().map(k =>
+    '<option value="' + k + '">' + months[k] + '</option>').join('');
+  updateFilterVisualState();
+}
+
+function applyFilters() {
+  showBusy();
+  setTimeout(() => {
+    const q = (document.getElementById('fSearch').value || '').toLowerCase().trim();
+    const sales = document.getElementById('fSales').value;
+    const bulan = document.getElementById('fBulan').value;
+    const tgl = document.getElementById('fTanggal').value;
+    const hasQ = !!q, hasSales = !!sales, hasBulan = !!bulan, hasTgl = !!tgl;
+    const payFilterLc = payFilter ? payFilter.toLowerCase() : '';
+    const out = [];
+    for (let i = 0; i < rawData.length; i++) {
+      const r = rawData[i];
+      if (payFilterLc && String(r.Pembayaran).toLowerCase() !== payFilterLc) continue;
+      if (hasSales && r.Sales !== sales) continue;
+      if (hasBulan && r.BulanKey !== bulan) continue;
+      if (hasTgl && r.YMD !== tgl) continue;
+      if (hasQ && r.Haystack.indexOf(q) === -1) continue;
+      out.push(r);
+    }
+    filteredData = out;
+    processed = computeAll(filteredData);
+    bumpRenderVersion();
+    updateFilterCount();
+    updateFilterVisualState();
+    switchTo(currentTab);
+    hideBusy();
+  }, 10);
+}
+
+function resetFilters(silent) {
+  document.getElementById('fSearch').value = '';
+  document.getElementById('fSales').value = '';
+  document.getElementById('fBulan').value = defaultMonthKey();
+  document.getElementById('fTanggal').value = '';
+  payFilter = '';
+  const group = document.getElementById('fPayGroup');
+  if (group) group.querySelectorAll('.pill').forEach((b, i) => b.classList.toggle('active', i === 0));
+  updateFilterVisualState();
+  if (!silent && rawData.length) {
+    filteredData = defaultMonthFiltered();
+    processed = computeAll(filteredData);
+    bumpRenderVersion();
+    updateFilterCount();
+    switchTo(currentTab);
+  }
+}
+
+function updateFilterVisualState() {
+  ['fSales', 'fBulan', 'fTanggal'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.classList.toggle('is-empty', !el.value);
+  });
+}
+
+function updateFilterCount() {
+  const el = document.getElementById('filterCount');
+  const fe = document.getElementById('fakturCount');
+  const total = processed ? processed.kpi.fakturUnik : 0;
+  if (fe) fe.innerHTML = '📄 Faktur: <strong>' + total.toLocaleString('id-ID') + '</strong>';
+  if (!el) return;
+  if (filteredData.length === rawData.length) el.textContent = '';
+  else el.textContent = '(' + filteredData.length.toLocaleString('id-ID') + ' / ' + rawData.length.toLocaleString('id-ID') + ' baris)';
+}
+
+const NF_INT = new Intl.NumberFormat('id-ID');
+const NF_DEC = new Intl.NumberFormat('id-ID', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+function fmtNum(n) {
+  if (n == null || isNaN(n)) return '-';
+  const abs = Math.abs(n);
+  const s = abs % 1 === 0 ? NF_INT.format(Math.round(abs)) : NF_DEC.format(abs);
+  return n < 0 ? '-' + s : s;
+}
+function groupBy(arr, keys) {
+  const map = new Map();
+  const kLen = keys.length;
+  for (let i = 0; i < arr.length; i++) {
+    const row = arr[i];
+    let k = '';
+    for (let j = 0; j < kLen; j++) { if (j) k += '||'; k += row[keys[j]]; }
+    let bucket = map.get(k);
+    if (!bucket) { bucket = []; map.set(k, bucket); }
+    bucket.push(row);
+  }
+  return map;
+}
+function fmtDate(d) {
+  if (!(d instanceof Date) || isNaN(d)) return '';
+  return d.toLocaleDateString('id-ID', { day: '2-digit', month: '2-digit', year: 'numeric' });
+}
+function getProductGroup(productName) {
+  const name = String(productName).toUpperCase();
+  for (const g of PRODUCT_GROUPS) {
+    if (g.keywords.length === 0) continue;
+    if (g.keywords.some(k => name.indexOf(k.toUpperCase()) !== -1)) return g.name;
+  }
+  return PRODUCT_GROUPS[PRODUCT_GROUPS.length - 1].name;
+}
+function escapeHtml(s) {
+  return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+function escData(s) {
+  const str = String(s == null ? '' : s);
+  if (str.indexOf('&') === -1 && str.indexOf('<') === -1 && str.indexOf('>') === -1 &&
+      str.indexOf('"') === -1 && str.indexOf("'") === -1) return str;
+  return escapeHtml(str);
+}
+
+/* ========== VIRTUAL TABLE ========== */
+const VT_ROW_H = 28;
+const VT_BUFFER = 30;
+const _vtObservers = new WeakMap();
+
+function createVirtualTable(container, headersHTML, rowsArr, colCount, opts) {
+  opts = opts || {};
+  const ROW_H = opts.rowHeight || VT_ROW_H;
+  const total = rowsArr.length;
+  const rowRenderer = opts.rowRenderer || (i => rowsArr[i]);
+
+  const _prevObs = _vtObservers.get(container);
+  if (_prevObs) {
+    try { _prevObs.disconnect(); } catch (_) {}
+    _vtObservers.delete(container);
+  }
+
+  container.innerHTML = '';
+  const wrap = document.createElement('div');
+  wrap.className = 'vt-wrap';
+
+  const tbl = document.createElement('table');
+  tbl.className = 'vt-table';
+  const thead = document.createElement('thead');
+  thead.innerHTML = headersHTML;
+  tbl.appendChild(thead);
+  const tbody = document.createElement('tbody');
+  tbl.appendChild(tbody);
+  wrap.appendChild(tbl);
+  container.appendChild(wrap);
+
+  if (opts.footerHTML) {
+    const ft = document.createElement('div');
+    ft.className = 'vt-info';
+    ft.innerHTML = opts.footerHTML;
+    container.appendChild(ft);
+  }
+
+  let lastStart = -1, lastEnd = -1, rafPending = false;
+
+  function paint() {
+    rafPending = false;
+    const st = wrap.scrollTop;
+    const vh = wrap.clientHeight || 600;
+    const startIdx = Math.max(0, Math.floor(st / ROW_H) - VT_BUFFER);
+    const endIdx   = Math.min(total, Math.ceil((st + vh) / ROW_H) + VT_BUFFER);
+    if (startIdx === lastStart && endIdx === lastEnd) return;
+    lastStart = startIdx; lastEnd = endIdx;
+
+    const topH = startIdx * ROW_H;
+    const botH = (total - endIdx) * ROW_H;
+
+    const html = [];
+    if (topH > 0)
+      html.push('<tr class="vt-spacer"><td colspan="' + colCount +
+                '" style="height:' + topH + 'px"></td></tr>');
+    for (let i = startIdx; i < endIdx; i++) html.push(rowRenderer(i));
+    if (botH > 0)
+      html.push('<tr class="vt-spacer"><td colspan="' + colCount +
+                '" style="height:' + botH + 'px"></td></tr>');
+
+    tbody.innerHTML = html.join('');
+  }
+
+  wrap.addEventListener('scroll', () => {
+    if (rafPending) return;
+    rafPending = true;
+    requestAnimationFrame(paint);
+  }, { passive: true });
+
+  if (window.ResizeObserver) {
+    const ro = new ResizeObserver(() => { lastStart = -1; paint(); });
+    ro.observe(wrap);
+    _vtObservers.set(container, ro);
+  } else {
+    window.addEventListener('resize', () => { lastStart = -1; paint(); });
+  }
+
+  requestAnimationFrame(() => { lastStart = -1; paint(); });
+
+  return { refresh: () => { lastStart = -1; paint(); } };
+}
+
+/* prepareFakturTable: kembalikan array DATA OBJEK (bukan HTML string).
+   HTML dibangun on-demand di renderFakturRow() saat baris masuk viewport. */
+function prepareFakturTable(list, noteText) {
+  const headersHTML =
+    '<tr>' +
+    '<th>NO</th><th>TANGGAL</th><th>NO. FAKTUR</th><th>SALES</th>' +
+    '<th>PRODUK</th><th>QTY</th><th>SATUAN</th>' +
+    '<th>HARGA BELI</th><th>HPP</th><th>HARGA JUAL</th><th>DISC</th><th>TOTAL</th>' +
+    '<th>NOMINAL FAKTUR</th><th>MODAL FAKTUR</th><th>PROFIT PER FAKTUR</th>' +
+    '<th>PEMBAYARAN</th><th>CUSTOMER</th><th>ALAMAT</th>' +
+    '</tr>';
+
+  const rowData = [];
+  let sumNom = 0, sumProf = 0, sumHpp = 0;
+  let dataRowCount = 0;
+  let fakCnt = 0;
+
+  for (let i = 0; i < list.length; i++) {
+    const f = list[i];
+    const no = i + 1;
+    let hppFaktur = 0;
+    for (let j = 0; j < f.items.length; j++) hppFaktur += Number(f.items[j].HPP) || 0;
+    if (!f.batal) { sumNom += f.nominal; sumProf += f.profitFaktur; sumHpp += hppFaktur; fakCnt++; }
+    const tglStr = fmtDate(f.tanggal);
+    const nomStr = fmtNum(f.nominal);
+    const profStr = fmtNum(f.profitFaktur);
+    const hppStr = fmtNum(hppFaktur);
+    const profCls = f.profitFaktur >= 0 ? 'profit-cell' : 'loss-cell';
+
+    for (let idx = 0; idx < f.items.length; idx++) {
+      const item = f.items[idx];
+      const isFirst = idx === 0;
+      const isRetur = item.Jumlah < 0;
+      let cls = isFirst ? 'faktur-start' : '';
+      if (isRetur) cls += ' retur';
+      if (f.batal) cls += ' batal';
+
+      rowData.push({
+        isTotal: false,
+        zero: Math.abs(f.nominal) < 1,
+        cls: cls,
+        isFirst: isFirst,
+        no: no,
+        tglStr: tglStr,
+        noFaktur: f.noFaktur,
+        sales: f.sales,
+        produk: item.Produk,
+        jumlah: item.Jumlah,
+        satuan: item.Satuan,
+        hargaBeli: item['Harga Beli'],
+        hpp: item.HPP,
+        hargaJual: item['Harga Jual'],
+        disc: item.Discount,
+        total: item.Total,
+        nomStr: nomStr,
+        hppStr: hppStr,
+        profStr: profStr,
+        profCls: profCls,
+        pembayaran: f.pembayaran,
+        customer: f.customer,
+        alamat: f.alamat
+      });
+      dataRowCount++;
+    }
+  }
+
+  rowData.push({ isTotal: true, count: fakCnt, sumNom: sumNom, sumProf: sumProf, sumHpp: sumHpp });
+
+  return {
+    headersHTML: headersHTML,
+    rowData: rowData,
+    colCount: 18,
+    footerHTML: noteText + ' <strong>(' + dataRowCount.toLocaleString('id-ID') +
+                ' baris — virtual scrolling aktif)</strong> · <strong>Total Modal (HPP): Rp ' +
+                fmtNum(sumHpp) + '</strong>'
+  };
+}
+
+function renderFakturRow(d) {
+  if (d.isTotal) {
+    return '<tr class="total-row"><td colspan="12">TOTAL (' + d.count + ' faktur)</td>' +
+      '<td class="num">Rp ' + fmtNum(d.sumNom) + '</td>' +
+      '<td class="num">Rp ' + fmtNum(d.sumHpp) + '</td>' +
+      '<td class="num">Rp ' + fmtNum(d.sumProf) + '</td>' +
+      '<td colspan="3"></td></tr>';
+  }
+  const p = [];
+  p.push('<tr class="', d.cls, '">');
+  if (d.isFirst) {
+    p.push('<td class="center">', d.no, '</td>');
+    p.push('<td>', d.tglStr, '</td>');
+    p.push('<td>', d.zero ? '<a class="fk0" data-no="' + escData(d.noFaktur) + '" title="Nominal 0 — klik untuk detail &amp; aksi">' + escData(d.noFaktur) + '</a>' : escData(d.noFaktur), '</td>');
+    p.push('<td>', escData(d.sales), '</td>');
+  } else {
+    p.push('<td></td><td></td><td></td><td></td>');
+  }
+  p.push('<td>', escData(d.produk), '</td>');
+  p.push('<td class="center">', fmtNum(d.jumlah), '</td>');
+  p.push('<td class="center">', escData(d.satuan), '</td>');
+  p.push('<td class="num">Rp ', fmtNum(d.hargaBeli), '</td>');
+  p.push('<td class="num">Rp ', fmtNum(d.hpp), '</td>');
+  p.push('<td class="num">Rp ', fmtNum(d.hargaJual), '</td>');
+  p.push('<td class="num">Rp ', fmtNum(d.disc), '</td>');
+  p.push('<td class="num">Rp ', fmtNum(d.total), '</td>');
+  if (d.isFirst) {
+    p.push('<td class="num"><strong>Rp ', d.nomStr, '</strong></td>');
+    p.push('<td class="num"><strong>Rp ', d.hppStr, '</strong></td>');
+    p.push('<td class="num ', d.profCls, '"><strong>Rp ', d.profStr, '</strong></td>');
+    p.push('<td>', escData(d.pembayaran), '</td>');
+    p.push('<td>', escData(d.customer), '</td>');
+    p.push('<td>', escData(d.alamat), '</td>');
+  } else {
+    p.push('<td></td><td></td><td></td><td></td><td></td><td></td>');
+  }
+  p.push('</tr>');
+  return p.join('');
+}
+
+function computeAll(data) {
+  let totalOmzet = 0, totalHPP = 0, totalQty = 0, returCount = 0;
+  let minMs = Infinity, maxMs = -Infinity;
+  const fakturSet = new Set();
+  for (let i = 0; i < data.length; i++) {
+    const r = data[i];
+    if (r.Batal) continue;
+    totalOmzet += r.Total; totalHPP += r.HPP; totalQty += r.Jumlah;
+    if (r.Jumlah < 0) returCount++;
+    fakturSet.add(r['No. Faktur']);
+    if (r.TanggalMs) { if (r.TanggalMs < minMs) minMs = r.TanggalMs; if (r.TanggalMs > maxMs) maxMs = r.TanggalMs; }
+  }
+  const totalProfit = totalOmzet - totalHPP;
+  const fakturUnik = fakturSet.size;
+  periodLabel = (minMs !== Infinity) ? fmtDate(new Date(minMs)) + ' – ' + fmtDate(new Date(maxMs)) : '';
+
+  function buildFakturList(subset) {
+    const fMap = groupBy(subset, ['No. Faktur']);
+    const list = [];
+    fMap.forEach((rows, nof) => {
+      let nominal = 0, profitF = 0;
+      for (let i = 0; i < rows.length; i++) { nominal += rows[i].Total; profitF += rows[i].Profit; }
+      const first = rows[0];
+      list.push({ noFaktur: nof, tanggal: first.Tanggal, sales: first.Sales,
+        pembayaran: first.Pembayaran, customer: first.Customer, alamat: first.Alamat,
+        nominal, profitFaktur: profitF, items: rows, batal: !!first.Batal });
+    });
+    return list;
+  }
+
+  const fakturList = buildFakturList(data);
+
+  return {
+    detail: data, fakturList,
+    kpi: { totalOmzet, totalHPP, totalProfit, totalQty, fakturUnik, returCount,
+           margin: totalOmzet ? totalProfit / totalOmzet : 0 },
+    period: periodLabel
+  };
+}
+
+function switchTab(el) {
+  const tabName = el.getAttribute('data-tab');
+  if (!tabName) return;
+  switchTo(tabName);
+}
+function switchTo(tabName) {
+  currentTab = tabName;
+  document.querySelectorAll('.tab').forEach(t => {
+    t.classList.toggle('active', t.getAttribute('data-tab') === tabName);
+  });
+  document.querySelectorAll('.content').forEach(c => c.classList.remove('active'));
+  const panel = document.getElementById('panel-' + tabName);
+  if (panel) panel.classList.add('active');
+  const skipPeriod = (tabName === 'databulanan');
+  const fb = document.getElementById('fBulan');
+  const ft = document.getElementById('fTanggal');
+  if (fb) { fb.disabled = skipPeriod; fb.title = skipPeriod ? 'Filter bulan dinonaktifkan di tab Data Bulanan' : ''; }
+  if (ft) { ft.disabled = skipPeriod; ft.title = skipPeriod ? 'Filter tanggal dinonaktifkan di tab Data Bulanan' : ''; }
+  const flBar = document.getElementById('filters');
+  if (flBar && rawData.length) flBar.style.display = (tabName === 'dataharga') ? 'none' : 'flex';
+  ensureRendered(tabName);
+}
+
+
+function bumpRenderVersion() {
+  renderVersion++;
+  ensureRendered(currentTab);
+}
+function ensureRendered(tabName) {
+  if (renderedVersion[tabName] === renderVersion) return;
+  renderTab(tabName);
+  renderedVersion[tabName] = renderVersion;
+}
+function renderTab(tabName) {
+  try {
+    switch (tabName) {
+      case 'faktur':      renderFaktur(); break;
+      case 'profitproduk': renderProfitProduk(); break;
+      case 'databulanan': renderDataBulanan(); break;
+      case 'dataharga': renderDataHarga(); break;
+    }
+  } catch (e) { console.error('Render error:', tabName, e); }
+}
+
+
+
+function renderFaktur() {
+  const el = document.getElementById('panel-faktur');
+  const prep = prepareFakturTable(processed.fakturList,
+    'Satu faktur bisa berisi beberapa produk. Info faktur hanya di baris pertama. Baris oranye = retur.');
+  createVirtualTable(el, prep.headersHTML, prep.rowData, prep.colCount, {
+    footerHTML: prep.footerHTML,
+    rowRenderer: i => renderFakturRow(prep.rowData[i])
+  });
+}
+
+
+
+/* ============================================================
+   🗑️ MODAL HAPUS DATA PER BULAN
+   ============================================================ */
+function openDeleteMonthModal() {
+  if (!rawData.length) {
+    showToast('Belum ada data untuk dihapus', 2000);
+    return;
+  }
+  const map = new Map();
+  for (let i = 0; i < rawData.length; i++) {
+    const r = rawData[i];
+    if (!r.BulanKey) continue;
+    let cur = map.get(r.BulanKey);
+    if (!cur) {
+      cur = {
+        key: r.BulanKey,
+        label: (r.Tanggal && !isNaN(r.Tanggal))
+          ? r.Tanggal.toLocaleDateString('id-ID', { month: 'long', year: 'numeric' })
+          : r.BulanKey,
+        count: 0
+      };
+      map.set(r.BulanKey, cur);
+    }
+    cur.count++;
+  }
+  const list = [...map.values()].sort((a, b) => a.key.localeCompare(b.key));
+
+  const container = document.getElementById('deleteMonthList');
+  if (!list.length) {
+    container.innerHTML = '<div class="dm-empty">Tidak ada bulan valid untuk dihapus.</div>';
+    document.getElementById('selectAllMonths').checked = false;
+    document.getElementById('btnConfirmDeleteMonths').disabled = true;
+    document.getElementById('btnConfirmDeleteMonths').textContent = 'Hapus Terpilih';
+    document.getElementById('deleteMonthModal').classList.add('open');
+    return;
+  }
+
+  container.innerHTML = list.map(m => `
+    <label class="dm-item" data-bulan="${escapeHtml(m.key)}">
+      <input type="checkbox" value="${escapeHtml(m.key)}"
+             onchange="updateDeleteMonthButton(); toggleDmItemClass(this)">
+      <span class="dm-lbl">${escapeHtml(m.label)}</span>
+      <span class="dm-cnt">${m.count.toLocaleString('id-ID')} baris</span>
+    </label>
+  `).join('');
+
+  document.getElementById('selectAllMonths').checked = false;
+  updateDeleteMonthButton();
+  document.getElementById('deleteMonthModal').classList.add('open');
+}
+
+function closeDeleteMonthModal() {
+  const el = document.getElementById('deleteMonthModal');
+  if (el) el.classList.remove('open');
+}
+
+function toggleDmItemClass(checkbox) {
+  const item = checkbox.closest('.dm-item');
+  if (item) item.classList.toggle('checked', checkbox.checked);
+}
+
+function toggleSelectAllMonths(checked) {
+  document.querySelectorAll('#deleteMonthList input[type=checkbox]').forEach(b => {
+    b.checked = checked;
+    toggleDmItemClass(b);
+  });
+  updateDeleteMonthButton();
+}
+
+function updateDeleteMonthButton() {
+  const checked = document.querySelectorAll('#deleteMonthList input[type=checkbox]:checked');
+  const btn = document.getElementById('btnConfirmDeleteMonths');
+  if (!btn) return;
+  btn.disabled = checked.length === 0;
+  btn.textContent = checked.length === 0
+    ? 'Hapus Terpilih'
+    : 'Hapus ' + checked.length + ' Bulan Terpilih';
+}
+
+function confirmDeleteMonths() {
+  const checked = [...document.querySelectorAll('#deleteMonthList input[type=checkbox]:checked')]
+    .map(i => i.value);
+  if (!checked.length) return;
+
+  const setBulan = new Set(checked);
+  let totalRows = 0;
+  for (let i = 0; i < rawData.length; i++) {
+    if (setBulan.has(rawData[i].BulanKey)) totalRows++;
+  }
+
+  const labelList = checked.map(k => {
+    const parts = k.split('-');
+    const y = parseInt(parts[0], 10);
+    const m = parseInt(parts[1], 10);
+    const d = new Date(y, m - 1, 1);
+    return d.toLocaleDateString('id-ID', { month: 'long', year: 'numeric' });
+  }).join(', ');
+
+  const ok = confirm(
+    'Hapus ' + totalRows.toLocaleString('id-ID') + ' baris dari ' + checked.length + ' bulan?\n\n' +
+    'Bulan: ' + labelList + '\n\n' +
+    'Tindakan ini tidak bisa dibatalkan.'
+  );
+  if (!ok) return;
+
+  const newRaw = [];
+  for (let i = 0; i < rawData.length; i++) {
+    if (!setBulan.has(rawData[i].BulanKey)) newRaw.push(rawData[i]);
+  }
+  rawData = newRaw;
+  closeDeleteMonthModal();
+
+  if (!rawData.length) {
+    if ('indexedDB' in window) {
+      idbClear().then(() => {
+        notifyDataChanged();
+        resetApp(false);
+        showToast('🗑️ Semua data telah dihapus', 2500);
+      }).catch(() => {
+        resetApp(false);
+        showToast('🗑️ Semua data telah dihapus', 2500);
+      });
+    } else {
+      resetApp(false);
+      showToast('🗑️ Semua data telah dihapus', 2500);
+    }
+    return;
+  }
+
+  document.getElementById('fSearch').value = '';
+  document.getElementById('fSales').value = '';
+  document.getElementById('fBulan').value = '';
+  document.getElementById('fTanggal').value = '';
+  payFilter = '';
+  const payGroup = document.getElementById('fPayGroup');
+  if (payGroup) payGroup.querySelectorAll('.pill').forEach((b, i) => b.classList.toggle('active', i === 0));
+
+  filteredData = rawData.slice();
+  buildFilterOptions();
+  initPayButtons();
+  processed = computeAll(filteredData);
+  bumpRenderVersion();
+  updateFilterCount();
+  updateFilterVisualState();
+  switchTo(currentTab);
+
+  if ('indexedDB' in window) {
+    idbSave({ rawData, fileName, savedAt: Date.now() })
+      .then(() => notifyDataChanged())
+      .catch(e => console.warn('[idb] save after delete fail:', e));
+  }
+
+  showToast('🗑️ ' + totalRows.toLocaleString('id-ID') + ' baris dihapus (' + labelList + ')', 3000);
+}
+
+/* ========== DOWNLOAD ========== */
+
+
+
+function fmtPriceRange(minV, maxV) {
+  if (minV == null && maxV == null) return '-';
+  const a = minV != null ? minV : maxV;
+  const b = maxV != null ? maxV : minV;
+  if (a == null) return '-';
+  if (Math.round(a) === Math.round(b)) return 'Rp ' + fmtNum(Math.round(a));
+  return 'Rp ' + fmtNum(Math.round(a)) + ' - Rp ' + fmtNum(Math.round(b));
+}
+
+
+
+function sheetFromAOA(aoa, opts) {
+  opts = opts || {};
+  const ws = XLSX.utils.aoa_to_sheet(aoa);
+  const colWidths = [];
+  const maxW = opts.maxColWidth || 40;
+  aoa.forEach(row => {
+    row.forEach((cell, i) => {
+      let len = 8;
+      if (cell != null && typeof cell === 'object' && cell.v != null) len = String(cell.v).length;
+      else if (cell != null) len = String(cell).length;
+      colWidths[i] = Math.max(colWidths[i] || 8, Math.min(len + 2, maxW));
+    });
+  });
+  if (opts.colWidths) {
+    opts.colWidths.forEach((w, i) => { if (w) colWidths[i] = w; });
+  }
+  ws['!cols'] = colWidths.map(w => ({ wch: w }));
+  return ws;
+}
+function styleHeaderRow(ws, colCount) {
+  for (let c = 0; c < colCount; c++) {
+    const ref = XLSX.utils.encode_cell({ r: 0, c: c });
+    const cell = ws[ref];
+    if (!cell) continue;
+    cell.s = {
+      font: { bold: true, color: { rgb: 'FFFFFF' }, sz: 11 },
+      fill: { fgColor: { rgb: '1B3A5F' } },
+      alignment: { horizontal: 'center', vertical: 'center', wrapText: true },
+      border: {
+        top: { style: 'thin', color: { rgb: '0F2744' } },
+        bottom: { style: 'thin', color: { rgb: '0F2744' } },
+        left: { style: 'thin', color: { rgb: '0F2744' } },
+        right: { style: 'thin', color: { rgb: '0F2744' } }
+      }
+    };
+  }
+}
+function styleTotalRow(ws, rowIdx, colCount) {
+  for (let c = 0; c < colCount; c++) {
+    const ref = XLSX.utils.encode_cell({ r: rowIdx, c: c });
+    let cell = ws[ref];
+    if (!cell) { cell = { t: 's', v: '' }; ws[ref] = cell; }
+    const prev = cell.s || {};
+    cell.s = Object.assign({}, prev, {
+      font: { bold: true, sz: 11 },
+      fill: { fgColor: { rgb: 'FFF2CC' } },
+      border: {
+        top: { style: 'thin', color: { rgb: 'D0D5DD' } },
+        bottom: { style: 'medium', color: { rgb: '1B3A5F' } },
+        left: { style: 'thin', color: { rgb: 'D0D5DD' } },
+        right: { style: 'thin', color: { rgb: 'D0D5DD' } }
+      }
+    });
+  }
+}
+function buildFakturSheetFromList(list) {
+  list = list.filter(f => !f.batal);
+  const hdr = ['NO', 'TANGGAL', 'NO. FAKTUR', 'SALES', 'PRODUK', 'QTY', 'SATUAN',
+    'HARGA BELI', 'HPP', 'HARGA JUAL', 'DISC', 'TOTAL',
+    'NOMINAL FAKTUR', 'MODAL FAKTUR', 'PROFIT PER FAKTUR', 'PEMBAYARAN', 'CUSTOMER', 'ALAMAT'];
+  const aoa = [hdr];
+  let no = 0;
+  let sumNom = 0, sumProf = 0, sumQty = 0, sumTotal = 0, sumHpp = 0;
+  const numCols = [5, 7, 8, 9, 10, 11, 12, 13, 14];
+  list.forEach(f => {
+    no++;
+    const tglStr = fmtDate(f.tanggal);
+    let hppFaktur = 0;
+    for (let j = 0; j < f.items.length; j++) hppFaktur += Number(f.items[j].HPP) || 0;
+    sumNom += Number(f.nominal) || 0;
+    sumProf += Number(f.profitFaktur) || 0;
+    sumHpp += hppFaktur;
+    f.items.forEach((item, idx) => {
+      const qty = Number(item.Jumlah) || 0;
+      const hb = Number(item['Harga Beli']) || 0;
+      const hpp = Number(item.HPP) || 0;
+      const hj = Number(item['Harga Jual']) || 0;
+      const disc = Number(item.Discount) || 0;
+      const tot = Number(item.Total) || 0;
+      sumQty += qty;
+      sumTotal += tot;
+      if (idx === 0) {
+        aoa.push([
+          no, tglStr, f.noFaktur || '', f.sales || '', item.Produk || '',
+          qty, item.Satuan || '', hb, hpp, hj, disc, tot,
+          Number(f.nominal) || 0, hppFaktur, Number(f.profitFaktur) || 0,
+          f.pembayaran || '', f.customer || '', f.alamat || ''
+        ]);
+      } else {
+        aoa.push([
+          '', '', '', '', item.Produk || '',
+          qty, item.Satuan || '', hb, hpp, hj, disc, tot,
+          '', '', '', '', '', ''
+        ]);
+      }
+    });
+  });
+  const totalRowIdx = aoa.length;
+  aoa.push([
+    '', '', '', '', 'TOTAL (' + no + ' faktur)',
+    sumQty, '', '', sumHpp, '', '', sumTotal,
+    sumNom, sumHpp, sumProf,
+    '', '', ''
+  ]);
+  const ws = sheetFromAOA(aoa, {
+    colWidths: [5, 12, 16, 12, 28, 8, 8, 12, 12, 12, 10, 12, 14, 14, 14, 12, 22, 28]
+  });
+  const RP = '#,##0';
+  const range = XLSX.utils.decode_range(ws['!ref'] || 'A1');
+  for (let r = 1; r <= range.e.r; r++) {
+    for (let c of numCols) {
+      const ref = XLSX.utils.encode_cell({ r: r, c: c });
+      const cell = ws[ref];
+      if (!cell) continue;
+      if (typeof cell.v === 'number') {
+        cell.t = 'n';
+        cell.z = RP;
+        cell.s = Object.assign({}, cell.s || {}, {
+          alignment: { horizontal: 'right' },
+          border: {
+            top: { style: 'thin', color: { rgb: 'E2E8F0' } },
+            bottom: { style: 'thin', color: { rgb: 'E2E8F0' } },
+            left: { style: 'thin', color: { rgb: 'E2E8F0' } },
+            right: { style: 'thin', color: { rgb: 'E2E8F0' } }
+          }
+        });
+      }
+    }
+  }
+  styleHeaderRow(ws, hdr.length);
+  styleTotalRow(ws, totalRowIdx, hdr.length);
+  return ws;
+}
+function buildFakturSheet() { return buildFakturSheetFromList(processed.fakturList); }
+
+function downloadAll() {
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, buildFakturSheet(), 'Faktur');
+  const d = new Date();
+  const ymd = d.getFullYear() + String(d.getMonth()+1).padStart(2,'0') + String(d.getDate()).padStart(2,'0');
+  const base = (fileName || 'data').replace(/\.[^.]+$/, '').replace(/[^\w\-]+/g, '_').substring(0, 40);
+  const fname = 'Laporan_Penjualan_' + base + '_' + ymd + '.xlsx';
+  XLSX.writeFile(wb, fname, { cellStyles: true });
+  showToast('⬇️ Excel diunduh: ' + fname, 2500);
+}
+
+
+
+
+
+
+
+/* ========== PROFIT PENJUALAN PER PRODUK ========== */
+let profitProdGroupFilter = '';
+let profitProdSort = 'profit'; /* profit | omzet | margin | qty | produk */
+
+function setProfitProdGroup(v) {
+  profitProdGroupFilter = v || '';
+  renderProfitProduk();
+  renderedVersion.profitproduk = renderVersion;
+}
+function setProfitProdSort(v) {
+  profitProdSort = v || 'profit';
+  renderProfitProduk();
+  renderedVersion.profitproduk = renderVersion;
+}
+
+function computeProfitProduk(data) {
+  const byProd = new Map();
+  for (let i = 0; i < data.length; i++) {
+    const r = data[i];
+    const prod = String(r.Produk || '').trim();
+    if (!prod) continue;
+    let p = byProd.get(prod);
+    if (!p) {
+      p = {
+        produk: prod,
+        satuan: String(r.Satuan || '').trim(),
+        satuanCount: {},
+        qty: 0,
+        omzet: 0,
+        hpp: 0,
+        profit: 0,
+        minHb: null, maxHb: null,
+        minHj: null, maxHj: null
+      };
+      byProd.set(prod, p);
+    }
+    const qty = Number(r.Jumlah) || 0;
+    const omzet = Number(r.Total) || 0;
+    const hpp = Number(r.HPP) || 0;
+    const profit = Number(r.Profit) || 0;
+    const hb = Number(r['Harga Beli']) || 0;
+    const hj = Number(r['Harga Jual']) || 0;
+    p.qty += qty;
+    p.omzet += omzet;
+    p.hpp += hpp;
+    p.profit += profit;
+    if (hb > 0) {
+      if (p.minHb == null || hb < p.minHb) p.minHb = hb;
+      if (p.maxHb == null || hb > p.maxHb) p.maxHb = hb;
+    }
+    if (hj > 0) {
+      if (p.minHj == null || hj < p.minHj) p.minHj = hj;
+      if (p.maxHj == null || hj > p.maxHj) p.maxHj = hj;
+    }
+    const sat = String(r.Satuan || '').trim();
+    if (sat) p.satuanCount[sat] = (p.satuanCount[sat] || 0) + Math.abs(qty);
+  }
+  const rows = [];
+  byProd.forEach(p => {
+    if (Math.abs(p.qty) < 1e-9 && Math.abs(p.omzet) < 1) return;
+    let bestSat = p.satuan, bestN = 0;
+    for (const [s, n] of Object.entries(p.satuanCount)) {
+      if (n > bestN) { bestN = n; bestSat = s; }
+    }
+    p.satuan = bestSat;
+    p.margin = p.omzet ? (p.profit / p.omzet) : 0;
+    rows.push(p);
+  });
+  rows.sort((a, b) => {
+    if (profitProdSort === 'produk') return a.produk.localeCompare(b.produk, 'id');
+    if (profitProdSort === 'omzet') {
+      const d = b.omzet - a.omzet;
+      return d !== 0 ? d : a.produk.localeCompare(b.produk, 'id');
+    }
+    if (profitProdSort === 'margin') {
+      const d = b.margin - a.margin;
+      return d !== 0 ? d : (b.omzet - a.omzet) || a.produk.localeCompare(b.produk, 'id');
+    }
+    if (profitProdSort === 'qty') {
+      const d = b.qty - a.qty;
+      return d !== 0 ? d : a.produk.localeCompare(b.produk, 'id');
+    }
+    /* default profit */
+    const d = b.profit - a.profit;
+    return d !== 0 ? d : a.produk.localeCompare(b.produk, 'id');
+  });
+  let totQty = 0, totOmzet = 0, totHpp = 0, totProfit = 0;
+  rows.forEach(p => {
+    totQty += p.qty; totOmzet += p.omzet; totHpp += p.hpp; totProfit += p.profit;
+  });
+  return {
+    rows,
+    totals: {
+      qty: totQty, omzet: totOmzet, hpp: totHpp, profit: totProfit,
+      margin: totOmzet ? totProfit / totOmzet : 0,
+      count: rows.length
+    }
+  };
+}
+
+function renderProfitProduk() {
+  const el = document.getElementById('panel-profitproduk');
+  if (!el || !processed) {
+    if (el) el.innerHTML = '<div class="ps-empty">Belum ada data.</div>';
+    return;
+  }
+  let data = (filteredData || []).filter(r => !r.Batal);
+  if (profitProdGroupFilter) {
+    data = data.filter(r => r.GroupName === profitProdGroupFilter);
+  }
+  const sum = computeProfitProduk(data);
+  const bulanEl = document.getElementById('fBulan');
+  const bulanLabel = (bulanEl && bulanEl.value && bulanEl.selectedOptions[0])
+    ? bulanEl.selectedOptions[0].textContent : 'Semua bulan';
+  const now = new Date();
+  const saveTgl = now.toLocaleDateString('id-ID', { day: '2-digit', month: '2-digit', year: 'numeric' })
+    + ' ' + now.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+  const groupLabel = profitProdGroupFilter
+    ? profitProdGroupFilter.replace(/^Produk\s+/i, '').toUpperCase().replace(/\s+/g, '_')
+    : 'SEMUA';
+
+  let html = '<div class="subfilter-bar">';
+  html += '<label>📦 Grup Produk:</label>';
+  html += '<select onchange="setProfitProdGroup(this.value)">';
+  html += '<option value=""' + (!profitProdGroupFilter ? ' selected' : '') + '>Semua Grup</option>';
+  PRODUCT_GROUPS.forEach(g => {
+    const sel = (profitProdGroupFilter === g.name) ? ' selected' : '';
+    html += '<option value="' + escapeHtml(g.name) + '"' + sel + '>' + escapeHtml(g.tabLabel || g.name) + '</option>';
+  });
+  html += '</select>';
+  html += '<label style="margin-left:8px">↕️ Urut:</label>';
+  html += '<select onchange="setProfitProdSort(this.value)">';
+  const sorts = [
+    ['profit', 'Profit terbesar'],
+    ['omzet', 'Omzet terbesar'],
+    ['margin', 'Margin terbesar'],
+    ['qty', 'Qty terbesar'],
+    ['produk', 'Nama produk A–Z']
+  ];
+  sorts.forEach(([v, lab]) => {
+    html += '<option value="' + v + '"' + (profitProdSort === v ? ' selected' : '') + '>' + lab + '</option>';
+  });
+  html += '</select>';
+  html += '<span class="info"><strong>' + sum.totals.count.toLocaleString('id-ID') + '</strong> produk</span>';
+  html += '</div>';
+
+  if (!sum.rows.length) {
+    html += '<div class="ps-empty">Tidak ada data untuk filter saat ini.</div>';
+    el.innerHTML = html;
+    return;
+  }
+
+  html += '<div class="ps-title">Profit Penjualan Per Produk</div>';
+  html += '<div class="ps-sub">bulan ' + escapeHtml(bulanLabel) + ', data di save tgl: ' +
+    escapeHtml(saveTgl) + ' | Produk: ' + escapeHtml(groupLabel) + '</div>';
+  html += '<div class="ps-wrap"><table class="ps-table"><thead><tr>';
+  html += '<th style="text-align:center;min-width:40px">NO</th>';
+  html += '<th class="ps-prod">PRODUK</th>';
+  html += '<th style="text-align:center">QTY</th>';
+  html += '<th>TOTAL PENJUALAN</th>';
+  html += '<th>TOTAL HPP</th>';
+  html += '<th>HARGA JUAL</th>';
+  html += '<th>HARGA BELI</th>';
+  html += '<th>PROFIT</th>';
+  html += '<th>MARGIN %</th>';
+  html += '</tr></thead><tbody>';
+
+  sum.rows.forEach((p, i) => {
+    const mCls = p.margin >= 0 ? 'profit-cell' : 'loss-cell';
+    const pCls = p.profit >= 0 ? 'profit-cell' : 'loss-cell';
+    const marginStr = isFinite(p.margin)
+      ? (Math.round(p.margin * 1000) / 10).toLocaleString('id-ID', { minimumFractionDigits: 0, maximumFractionDigits: 2 }) + ' %'
+      : '-';
+    html += '<tr>';
+    html += '<td class="center">' + (i + 1) + '</td>';
+    html += '<td class="ps-prod">' + escapeHtml(p.produk) + '</td>';
+    html += '<td class="num">' + fmtNum(p.qty) + '</td>';
+    html += '<td class="num">Rp ' + fmtNum(p.omzet) + '</td>';
+    html += '<td class="num">Rp ' + fmtNum(p.hpp) + '</td>';
+    html += '<td class="num">' + fmtPriceRange(p.minHj, p.maxHj) + '</td>';
+    html += '<td class="num">' + fmtPriceRange(p.minHb, p.maxHb) + '</td>';
+    html += '<td class="num ' + pCls + '">Rp ' + fmtNum(p.profit) + '</td>';
+    html += '<td class="num ' + mCls + '">' + marginStr + '</td>';
+    html += '</tr>';
+  });
+
+  const t = sum.totals;
+  const tm = t.margin >= 0 ? 'profit-cell' : 'loss-cell';
+  const tp = t.profit >= 0 ? 'profit-cell' : 'loss-cell';
+  const tMarginStr = isFinite(t.margin)
+    ? (Math.round(t.margin * 1000) / 10).toLocaleString('id-ID', { minimumFractionDigits: 0, maximumFractionDigits: 2 }) + ' %'
+    : '-';
+  html += '<tr class="ps-total">';
+  html += '<td colspan="2">TOTAL (' + t.count + ' produk)</td>';
+  html += '<td class="num">' + fmtNum(t.qty) + '</td>';
+  html += '<td class="num">Rp ' + fmtNum(t.omzet) + '</td>';
+  html += '<td class="num">Rp ' + fmtNum(t.hpp) + '</td>';
+  html += '<td></td><td></td>';
+  html += '<td class="num ' + tp + '">Rp ' + fmtNum(t.profit) + '</td>';
+  html += '<td class="num ' + tm + '">' + tMarginStr + '</td>';
+  html += '</tr>';
+
+  html += '</tbody></table></div>';
+  el.innerHTML = html;
+}
+
+function buildProfitProdukSheet() {
+  let data = (filteredData || []).filter(r => !r.Batal);
+  if (profitProdGroupFilter) data = data.filter(r => r.GroupName === profitProdGroupFilter);
+  const sum = computeProfitProduk(data);
+  if (!sum.rows.length) return null;
+
+  const bulanEl = document.getElementById('fBulan');
+  const bulanLabel = (bulanEl && bulanEl.value && bulanEl.selectedOptions[0])
+    ? bulanEl.selectedOptions[0].textContent : 'Semua bulan';
+  const now = new Date();
+  const saveTgl = now.toLocaleDateString('id-ID', { day: '2-digit', month: '2-digit', year: 'numeric' })
+    + ' ' + now.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+  const groupLabel = profitProdGroupFilter
+    ? profitProdGroupFilter.replace(/^Produk\s+/i, '').toUpperCase().replace(/\s+/g, '_')
+    : 'SEMUA';
+
+  const header = ['No', 'Produk', 'Qty', 'Total Penjualan', 'Total HPP', 'Harga Jual', 'Harga Beli', 'Profit', 'Margin %'];
+  const aoa = [
+    ['Profit Penjualan Per Produk'],
+    ['bulan ' + bulanLabel + ', data di save tgl: ' + saveTgl + ' | Produk: ' + groupLabel],
+    [],
+    header
+  ];
+  sum.rows.forEach((p, i) => {
+    aoa.push([
+      i + 1,
+      p.produk,
+      Number(p.qty) || 0,
+      Number(p.omzet) || 0,
+      Math.round(p.hpp) || 0,
+      fmtPriceRange(p.minHj, p.maxHj).replace(/^Rp\s*/, ''),
+      fmtPriceRange(p.minHb, p.maxHb).replace(/^Rp\s*/, ''),
+      Number(p.profit) || 0,
+      isFinite(p.margin) ? Math.round(p.margin * 1000) / 10 : null
+    ]);
+  });
+  const t = sum.totals;
+  aoa.push([
+    '', 'TOTAL',
+    Number(t.qty) || 0,
+    Number(t.omzet) || 0,
+    Math.round(t.hpp) || 0,
+    '', '',
+    Number(t.profit) || 0,
+    isFinite(t.margin) ? Math.round(t.margin * 1000) / 10 : null
+  ]);
+
+  const ws = XLSX.utils.aoa_to_sheet(aoa);
+  ws['!cols'] = [
+    { wch: 5 }, { wch: 32 }, { wch: 10 }, { wch: 16 }, { wch: 14 },
+    { wch: 18 }, { wch: 18 }, { wch: 14 }, { wch: 10 }
+  ];
+  ws['!merges'] = [
+    { s: { r: 0, c: 0 }, e: { r: 0, c: 8 } },
+    { s: { r: 1, c: 0 }, e: { r: 1, c: 8 } }
+  ];
+  const t0 = ws[XLSX.utils.encode_cell({ r: 0, c: 0 })];
+  if (t0) t0.s = { font: { bold: true, sz: 14, color: { rgb: '1B3A5F' } } };
+  const t1 = ws[XLSX.utils.encode_cell({ r: 1, c: 0 })];
+  if (t1) t1.s = { font: { italic: true, sz: 10, color: { rgb: '64748B' } } };
+  for (let c = 0; c < header.length; c++) {
+    const cell = ws[XLSX.utils.encode_cell({ r: 3, c: c })];
+    if (cell) cell.s = {
+      font: { bold: true, sz: 11, color: { rgb: 'FFFFFF' } },
+      fill: { fgColor: { rgb: '1E3A5F' } },
+      alignment: { horizontal: 'center', vertical: 'center' }
+    };
+  }
+  return ws;
+}
+
+
+/* ========== DATA BULANAN (semua bulan, filter bulan dinonaktifkan) ========== */
+function dataBulananSource() {
+  /* Abaikan filter bulan & tanggal; tetap hormati sales, pembayaran, pencarian */
+  const q = (document.getElementById('fSearch')?.value || '').toLowerCase().trim();
+  const sales = document.getElementById('fSales')?.value || '';
+  const payFilterLc = (typeof payFilter === 'string' && payFilter) ? payFilter.toLowerCase() : '';
+  const hasQ = !!q, hasSales = !!sales;
+  const out = [];
+  const src = rawData || [];
+  for (let i = 0; i < src.length; i++) {
+    const r = src[i];
+    if (r.Batal) continue;
+    if (payFilterLc && String(r.Pembayaran).toLowerCase() !== payFilterLc) continue;
+    if (hasSales && r.Sales !== sales) continue;
+    if (hasQ && (r.Haystack || '').indexOf(q) === -1) continue;
+    out.push(r);
+  }
+  return out;
+}
+
+/* ========== DATA BULANAN (2 tabel: Produk Fitri & Produk Rupa rupa) ========== */
+const DB_GROUPS = [
+  { k: 'fitri', title: 'Produk Fitri' },
+  { k: 'rupa',  title: 'Produk Rupa rupa' }
+];
+function dbR(v) { return Math.round((Number(v) || 0) * 100) / 100; }
+function dbRp(v) { return 'Rp ' + fmtNum(dbR(v)); }
+function dbPct(m) {
+  const x = Math.round((Number(m) || 0) * 1000) / 10;
+  return x.toLocaleString('id-ID', { maximumFractionDigits: 1 }) + '%';
+}
+
+function computeDataBulanan(data) {
+  const byMonth = new Map();
+  const mk = () => ({ fak: new Set(), qty: 0, omzet: 0, profit: 0 });
+  for (let i = 0; i < data.length; i++) {
+    const r = data[i];
+    const key = r.BulanKey || '';
+    if (!key) continue;
+    let m = byMonth.get(key);
+    if (!m) {
+      const d = r.Tanggal;
+      const label = (d instanceof Date && !isNaN(d))
+        ? d.toLocaleDateString('id-ID', { month: 'long', year: 'numeric' })
+        : key;
+      m = { key, label, fitri: mk(), rupa: mk() };
+      byMonth.set(key, m);
+    }
+    const g = (r.GroupName === 'Produk Fitri') ? m.fitri : m.rupa;
+    if (r['No. Faktur']) g.fak.add(String(r['No. Faktur']));
+    g.qty += Number(r.Jumlah) || 0;
+    g.omzet += Number(r.Total) || 0;
+    g.profit += Number(r.Profit) || 0;
+  }
+  const months = [...byMonth.values()].sort((a, b) => a.key.localeCompare(b.key));
+  const out = { monthCount: months.length };
+  DB_GROUPS.forEach(gr => {
+    const rows = [];
+    const tot = { faktur: 0, qty: 0, omzet: 0, profit: 0, margin: 0 };
+    months.forEach(m => {
+      const g = m[gr.k];
+      if (!g.fak.size && !g.qty && !g.omzet) return;
+      const row = { label: m.label, faktur: g.fak.size, qty: g.qty, omzet: dbR(g.omzet), profit: dbR(g.profit) };
+      row.margin = row.omzet ? row.profit / row.omzet : 0;
+      rows.push(row);
+      tot.faktur += row.faktur; tot.qty += row.qty; tot.omzet += row.omzet; tot.profit += row.profit;
+    });
+    tot.omzet = dbR(tot.omzet); tot.profit = dbR(tot.profit);
+    tot.margin = tot.omzet ? tot.profit / tot.omzet : 0;
+    out[gr.k] = { rows, tot };
+  });
+  return out;
+}
+
+function dbTableHTML(g) {
+  let h = '<table class="ps-table db-table"><thead><tr>' +
+    '<th class="ps-prod">Bulan</th><th>Faktur</th><th>Qty</th><th>Omzet</th><th>Profit</th><th>Margin</th>' +
+    '</tr></thead><tbody>';
+  if (!g.rows.length) h += '<tr><td colspan="6" class="center" style="color:var(--muted)">Tidak ada data.</td></tr>';
+  g.rows.forEach(r => {
+    h += '<tr><td class="ps-prod">' + escapeHtml(r.label) + '</td>' +
+      '<td class="center">' + fmtNum(r.faktur) + '</td>' +
+      '<td class="num">' + fmtNum(r.qty) + '</td>' +
+      '<td class="num">' + dbRp(r.omzet) + '</td>' +
+      '<td class="num">' + dbRp(r.profit) + '</td>' +
+      '<td class="num">' + dbPct(r.margin) + '</td></tr>';
+  });
+  if (g.rows.length) {
+    const t = g.tot;
+    h += '<tr class="ps-total"><td class="ps-prod">TOTAL</td>' +
+      '<td class="center">' + fmtNum(t.faktur) + '</td>' +
+      '<td class="num">' + fmtNum(t.qty) + '</td>' +
+      '<td class="num">' + dbRp(t.omzet) + '</td>' +
+      '<td class="num">' + dbRp(t.profit) + '</td>' +
+      '<td class="num">' + dbPct(t.margin) + '</td></tr>';
+  }
+  return h + '</tbody></table>';
+}
+
+function renderDataBulanan() {
+  const el = document.getElementById('panel-databulanan');
+  if (!el) return;
+  if (!rawData || !rawData.length) {
+    el.innerHTML = '<div class="ps-empty">Belum ada data.</div>';
+    return;
+  }
+  const sum = computeDataBulanan(dataBulananSource());
+  let html = '<div class="subfilter-bar">';
+  html += '<span class="info">📅 <strong>Rekap Data Bulanan</strong> (semua bulan — filter bulan & tanggal dinonaktifkan di tab ini)</span>';
+  html += '<span class="info" style="margin-left:auto"><strong>' + sum.monthCount + '</strong> bulan</span>';
+  html += '</div>';
+  if (!sum.monthCount) {
+    el.innerHTML = html + '<div class="ps-empty">Tidak ada data.</div>';
+    return;
+  }
+  html += '<div class="ps-wrap">';
+  DB_GROUPS.forEach(gr => {
+    html += '<div class="db-sec-h"><div class="db-sec-t">' + escapeHtml(gr.title) + '</div>' +
+      '<button type="button" class="dh-btn" onclick="saveDataBulananGroup(\'' + gr.k + '\')">💾 Save Excel</button></div>';
+    html += dbTableHTML(sum[gr.k]);
+  });
+  html += '</div>';
+  el.innerHTML = html;
+}
+
+function buildDBSheet(keys) {
+  if (!rawData || !rawData.length) return null;
+  const sum = computeDataBulanan(dataBulananSource());
+  const now = new Date();
+  const stamp = now.toLocaleDateString('id-ID', { day: '2-digit', month: '2-digit', year: 'numeric' })
+    + ' ' + now.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+  const aoa = [['Rekap Data Bulanan'], ['semua bulan · data di save tgl: ' + stamp], []];
+  const titleRows = [], hdrRows = [], totRows = [];
+  keys.forEach(k => {
+    const gr = DB_GROUPS.find(x => x.k === k), g = sum[k];
+    if (!gr || !g || !g.rows.length) return;
+    titleRows.push(aoa.length); aoa.push([gr.title]);
+    hdrRows.push(aoa.length);   aoa.push(['Bulan', 'Faktur', 'Qty', 'Omzet', 'Profit', 'Margin']);
+    g.rows.forEach(r => aoa.push([r.label, r.faktur, r.qty, r.omzet, r.profit, r.margin]));
+    totRows.push(aoa.length);   aoa.push(['TOTAL', g.tot.faktur, g.tot.qty, g.tot.omzet, g.tot.profit, g.tot.margin]);
+    aoa.push([]);
+  });
+  if (aoa.length <= 3) return null;
+  const ws = XLSX.utils.aoa_to_sheet(aoa);
+  ws['!cols'] = [{ wch: 18 }, { wch: 10 }, { wch: 12 }, { wch: 18 }, { wch: 18 }, { wch: 10 }];
+  ws['!merges'] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: 5 } }, { s: { r: 1, c: 0 }, e: { r: 1, c: 5 } }];
+  const thin = { style: 'thin', color: { rgb: 'D0D5DD' } };
+  const bd = { top: thin, bottom: thin, left: thin, right: thin };
+  const t0 = ws['A1']; if (t0) t0.s = { font: { bold: true, sz: 14, color: { rgb: '1B3A5F' } } };
+  const t1 = ws['A2']; if (t1) t1.s = { font: { italic: true, sz: 10, color: { rgb: '64748B' } } };
+  titleRows.forEach(r => { const c = ws[XLSX.utils.encode_cell({ r, c: 0 })]; if (c) c.s = { font: { bold: true, sz: 12, color: { rgb: '1B3A5F' } } }; });
+  for (let r = 0; r < aoa.length; r++) {
+    if (aoa[r].length !== 6) continue;
+    const isH = hdrRows.indexOf(r) !== -1, isT = totRows.indexOf(r) !== -1;
+    for (let c = 0; c < 6; c++) {
+      const ref = XLSX.utils.encode_cell({ r, c });
+      let cell = ws[ref];
+      if (!cell) { cell = { t: 's', v: '' }; ws[ref] = cell; }
+      if (isH) {
+        cell.s = { font: { bold: true, sz: 11, color: { rgb: 'FFFFFF' } }, fill: { fgColor: { rgb: '1F3B73' } },
+          alignment: { horizontal: c === 0 ? 'left' : 'center', vertical: 'center' }, border: bd };
+      } else {
+        if (typeof cell.v === 'number') { cell.t = 'n'; cell.z = (c === 5) ? '0.0%' : '#,##0'; }
+        cell.s = { font: { bold: isT || c === 0, sz: 11 }, fill: isT ? { fgColor: { rgb: 'FFF2CC' } } : undefined,
+          alignment: { horizontal: c === 0 ? 'left' : (c === 1 ? 'center' : 'right') }, border: bd };
+      }
+    }
+  }
+  return ws;
+}
+function buildDataBulananSheet() { return buildDBSheet(DB_GROUPS.map(g => g.k)); }
+
+function saveDataBulananGroup(k) {
+  const gr = DB_GROUPS.find(x => x.k === k);
+  const ws = gr ? buildDBSheet([k]) : null;
+  if (!ws) { showToast('Tidak ada data untuk diekspor', 2000); return; }
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, gr.title.substring(0, 31));
+  const d = new Date();
+  const ymd = d.getFullYear() + String(d.getMonth() + 1).padStart(2, '0') + String(d.getDate()).padStart(2, '0');
+  const fname = 'Data_Bulanan_' + gr.title.replace(/\s+/g, '_') + '_' + ymd + '.xlsx';
+  XLSX.writeFile(wb, fname, { cellStyles: true });
+  showToast('⬇️ Excel diunduh: ' + fname, 2500);
+}
+
+
+/* ========== DATA HARGA (riwayat harga beli per produk) ========== */
+const DH = { q: '', bulan: '', prod: '', page: 1, per: 60, cols: { satuan: true, beli: true, jual: true, ket: true }, cache: null, match: null, matchQ: null };
+try { const sv = JSON.parse(localStorage.getItem('dhCols') || 'null'); if (sv) Object.assign(DH.cols, sv); } catch (e) {}
+let _dhT = null;
+if (!window._dhDoc) {
+  window._dhDoc = true;
+  document.addEventListener('click', e => {
+    const p = document.getElementById('dhPop');
+    if (p && !(e.target.closest && e.target.closest('.dh-gear-wrap'))) p.classList.remove('open');
+  });
+}
+
+function dhFmtYmd(s) { const a = String(s).split('-'); return (+a[2]) + '/' + (+a[1]) + '/' + a[0]; }
+
+/* Cari kapan harga TERAKHIR mulai berlaku. list = [[ymd, {b:[harga...]}], ...] urut tanggal */
+function dhPriceSince(list) {
+  if (!list.length) return null;
+  const lastVals = list[list.length - 1][1].b, cur = lastVals[lastVals.length - 1];
+  let i = list.length - 1;
+  while (i >= 0 && list[i][1].b.every(v => v === cur)) i--;
+  if (i < 0) return null;                                  /* harga tidak pernah berubah */
+  const vals = list[i][1].b, hasCur = vals.indexOf(cur) !== -1;
+  const prev = hasCur ? vals.filter(v => v !== cur).pop() : vals[vals.length - 1];
+  return { dir: cur > prev ? 'Naik' : 'Turun', since: hasCur ? list[i][0] : list[i + 1][0] };
+}
+
+function computeDataHarga() {
+  const sel = DH.bulan, months = new Map(), prods = new Map();
+  for (let i = 0; i < rawData.length; i++) {
+    const r = rawData[i];
+    if (r.BulanKey && !months.has(r.BulanKey) && r.Tanggal instanceof Date && !isNaN(r.Tanggal))
+      months.set(r.BulanKey, r.Tanggal.toLocaleDateString('id-ID', { month: 'long', year: 'numeric' }));
+    if (r.Batal || !r.Produk || !r.YMD) continue;
+    if ((Number(r.Jumlah) || 0) <= 0) continue;            /* retur tidak dihitung */
+    if (sel && r.BulanKey > sel) continue;                 /* riwayat sampai bulan terpilih */
+    const hb = Number(r['Harga Beli']) || 0, hj = Number(r['Harga Jual']) || 0;
+    if (hb <= 0 && hj <= 0) continue;
+    let p = prods.get(r.Produk);
+    if (!p) {
+      p = { produk: r.Produk, fitri: r.GroupName === 'Produk Fitri', sat: {}, dates: new Map(), inSel: false,
+            minB: null, maxB: null, minJ: null, maxJ: null };
+      prods.set(r.Produk, p);
+    }
+    if (hb > 0) { let d = p.dates.get(r.YMD); if (!d) { d = { b: [] }; p.dates.set(r.YMD, d); } d.b.push(hb); }
+    if (!sel || r.BulanKey === sel) {
+      p.inSel = true;
+      if (hb > 0) { if (p.minB == null || hb < p.minB) p.minB = hb; if (p.maxB == null || hb > p.maxB) p.maxB = hb; }
+      if (hj > 0) { if (p.minJ == null || hj < p.minJ) p.minJ = hj; if (p.maxJ == null || hj > p.maxJ) p.maxJ = hj; }
+      if (r.Satuan) p.sat[r.Satuan] = (p.sat[r.Satuan] || 0) + 1;
+    }
+  }
+  const rows = [];
+  prods.forEach(p => {
+    if (!p.inSel) return;
+    let bs = '', bn = 0;
+    for (const k in p.sat) if (p.sat[k] > bn) { bn = p.sat[k]; bs = k; }
+    p.satuan = bs;
+    const list = [...p.dates.entries()].sort((a, b) => a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0);
+    const ch = dhPriceSince(list);
+    p.ket = ch ? 'Penyesuaian tgl ' + dhFmtYmd(ch.since) : '';
+    p.ketCls = ch ? (ch.dir === 'Naik' ? 'dh-up' : 'dh-down') : '';
+    rows.push(p);
+  });
+  rows.sort((a, b) => (b.fitri - a.fitri) || a.produk.localeCompare(b.produk, 'id'));
+  return { rows, months: [...months.entries()].sort((a, b) => a[0] < b[0] ? -1 : 1) };
+}
+
+function dhRows() {
+  const all = DH.cache ? DH.cache.rows : [], q = DH.q.toLowerCase().trim();
+  let match = null;
+  if (q) {
+    if (DH.matchQ !== q) {
+      const s = new Set();
+      for (let i = 0; i < rawData.length; i++) { const r = rawData[i]; if (!r.Batal && (r.Haystack || '').indexOf(q) !== -1) s.add(r.Produk); }
+      DH.match = s; DH.matchQ = q;
+    }
+    match = DH.match;
+  }
+  return all.filter(p => (!DH.prod || p.produk === DH.prod) && (!match || match.has(p.produk)));
+}
+
+function dhPrice(a, b) {
+  if (a == null) return ['-', '-'];
+  return ['Rp ' + fmtNum(a), 'Rp ' + fmtNum(b)];
+}
+
+function dhBody() {
+  const host = document.getElementById('dhBody'); if (!host) return;
+  const rows = dhRows(), total = rows.length, pages = Math.max(1, Math.ceil(total / DH.per));
+  if (DH.page > pages) DH.page = pages;
+  if (DH.page < 1) DH.page = 1;
+  const a = (DH.page - 1) * DH.per, b = Math.min(total, a + DH.per), c = DH.cols;
+  const two = c.beli || c.jual, rs = two ? 2 : 1;
+  let h = '<div class="dh-meta"><span>' + (total ? 'Menampilkan <b>' + (a + 1) + '–' + b + '</b> dari <b>' + total + '</b> baris' : 'Tidak ada data untuk filter ini') + '</span>' +
+    '<span class="dh-pager"><button type="button" onclick="dhGo(-1)"' + (DH.page <= 1 ? ' disabled' : '') + '>‹</button>' +
+    'Halaman <b>' + DH.page + '</b> / ' + pages +
+    '<button type="button" onclick="dhGo(1)"' + (DH.page >= pages ? ' disabled' : '') + '>›</button></span></div>';
+  h += '<div class="dh-wrap" id="dhWrap"><table class="dh-table"><thead><tr><th rowspan="' + rs + '" style="min-width:230px">Produk</th>';
+  if (c.satuan) h += '<th rowspan="' + rs + '">Satuan</th>';
+  if (c.beli) h += '<th colspan="2">Harga Beli</th>';
+  if (c.jual) h += '<th colspan="2">Harga Jual</th>';
+  if (c.ket) h += '<th rowspan="' + rs + '" style="min-width:170px">Ket</th>';
+  h += '</tr>';
+  if (two) {
+    h += '<tr class="dh-r2">';
+    if (c.beli) h += '<th>Terendah</th><th>Tertinggi</th>';
+    if (c.jual) h += '<th>Terendah</th><th>Tertinggi</th>';
+    h += '</tr>';
+  }
+  h += '</thead><tbody>';
+  for (let i = a; i < b; i++) {
+    const p = rows[i], pb = dhPrice(p.minB, p.maxB), pj = dhPrice(p.minJ, p.maxJ);
+    h += '<tr><td>' + escapeHtml(p.produk) + '</td>';
+    if (c.satuan) h += '<td class="center">' + escapeHtml(p.satuan || '-') + '</td>';
+    if (c.beli) h += '<td class="num">' + pb[0] + '</td><td class="num">' + pb[1] + '</td>';
+    if (c.jual) h += '<td class="num">' + pj[0] + '</td><td class="num">' + pj[1] + '</td>';
+    if (c.ket) h += '<td class="' + p.ketCls + '">' + escapeHtml(p.ket) + '</td>';
+    h += '</tr>';
+  }
+  h += '</tbody></table></div>';
+  host.innerHTML = h;
+  const th = host.querySelector('.dh-table thead tr'), wrap = document.getElementById('dhWrap');
+  if (th && wrap) wrap.style.setProperty('--dh-h1', th.offsetHeight + 'px');
+}
+
+function renderDataHarga() {
+  const el = document.getElementById('panel-dataharga'); if (!el) return;
+  if (!rawData || !rawData.length) { el.innerHTML = '<div class="ps-empty">Belum ada data.</div>'; return; }
+  DH.cache = computeDataHarga();
+  DH.matchQ = null;
+  if (DH.bulan && !DH.cache.months.some(m => m[0] === DH.bulan)) DH.bulan = '';
+  const names = DH.cache.rows.map(p => p.produk);
+  if (DH.prod && names.indexOf(DH.prod) === -1) DH.prod = '';
+  const mLabel = DH.bulan ? (DH.cache.months.find(m => m[0] === DH.bulan) || [0, DH.bulan])[1] : 'Semua bulan';
+  let h = '<div class="dh-bar">' +
+    '<input type="text" class="dh-in dh-search" id="dhQ" placeholder="🔍 Cari produk / customer / no faktur..." value="' + escapeHtml(DH.q) + '" oninput="dhSearch(this.value)">' +
+    '<label>Bulan</label><select class="dh-in" onchange="dhSetBulan(this.value)"><option value="">Semua bulan</option>' +
+    DH.cache.months.map(m => '<option value="' + m[0] + '"' + (m[0] === DH.bulan ? ' selected' : '') + '>' + escapeHtml(m[1]) + '</option>').join('') + '</select>' +
+    '<label>Produk</label><select class="dh-in" onchange="dhSetProd(this.value)" style="max-width:240px"><option value="">Semua produk</option>' +
+    names.map(n => '<option value="' + escapeHtml(n) + '"' + (n === DH.prod ? ' selected' : '') + '>' + escapeHtml(n) + '</option>').join('') + '</select>' +
+    '<div class="dh-gear-wrap"><button type="button" class="dh-btn" title="Pilih kolom" onclick="dhGear(event)">⚙️</button><div class="dh-pop" id="dhPop" onclick="event.stopPropagation()"></div></div>' +
+    '<span class="dh-sp"></span>' +
+    '<button type="button" class="dh-btn" title="Tandai faktur nominal 0 sebagai batal" onclick="dhAutoBatal()">🚫 Cek Batal Otomatis</button>' +
+    '<button type="button" class="dh-btn" onclick="downloadCurrent()">💾 Simpan Excel</button></div>' +
+    '<div class="dh-title">' + escapeHtml(mLabel) + ' ( filter bulan )</div>' +
+    '<div id="dhBody" style="display:flex;flex-direction:column;flex:1;min-height:0"></div>';
+  el.innerHTML = h;
+  dhBody();
+}
+function dhRerender() { renderDataHarga(); renderedVersion.dataharga = renderVersion; }
+function dhSearch(v) { DH.q = v; clearTimeout(_dhT); _dhT = setTimeout(() => { DH.page = 1; dhBody(); }, 200); }
+function dhSetBulan(v) { DH.bulan = v; DH.page = 1; dhRerender(); }
+function dhSetProd(v) { DH.prod = v; DH.page = 1; dhBody(); }
+function dhGo(d) { DH.page += d; dhBody(); const w = document.getElementById('dhWrap'); if (w) w.scrollTop = 0; }
+function dhGear(e) {
+  e.stopPropagation();
+  const p = document.getElementById('dhPop'); if (!p) return;
+  if (p.classList.contains('open')) { p.classList.remove('open'); return; }
+  const L = [['satuan', 'Satuan'], ['beli', 'Harga Beli'], ['jual', 'Harga Jual'], ['ket', 'Ket (perubahan harga)']];
+  p.innerHTML = '<div class="dh-pop-t">Kolom ditampilkan</div>' + L.map(x =>
+    '<label><input type="checkbox"' + (DH.cols[x[0]] ? ' checked' : '') + ' onchange="dhCol(\'' + x[0] + '\', this.checked)"> ' + x[1] + '</label>').join('');
+  p.classList.add('open');
+}
+function dhCol(k, on) {
+  DH.cols[k] = !!on;
+  try { localStorage.setItem('dhCols', JSON.stringify(DH.cols)); } catch (e) {}
+  dhBody();
+}
+
+/* Tandai otomatis semua faktur bernominal 0 sebagai BATAL */
+function dhAutoBatal() {
+  const byNo = new Map();
+  for (let i = 0; i < rawData.length; i++) {
+    const r = rawData[i], no = r['No. Faktur']; if (!no) continue;
+    const k = batalKey(no); let o = byNo.get(k);
+    if (!o) { o = { no, sum: 0, batal: !!BATAL[k] }; byNo.set(k, o); }
+    o.sum += Number(r.Total) || 0;
+  }
+  const list = [...byNo.values()].filter(o => !o.batal && Math.abs(o.sum) < 1);
+  if (!list.length) { showToast('✅ Tidak ada faktur nominal 0 yang perlu ditandai batal', 3000); return; }
+  const sample = list.slice(0, 8).map(o => o.no).join(', ') + (list.length > 8 ? ', ...' : '');
+  if (!confirm('Tandai ' + list.length + ' faktur bernominal 0 sebagai BATAL?\n\n' + sample +
+    '\n\nFaktur batal dicoret dan tidak dihitung di total, ringkasan, export Excel, maupun tab Cek. ' +
+    'Bisa dikembalikan satu per satu lewat klik nomor fakturnya.')) return;
+  const now = Date.now();
+  list.forEach(o => { BATAL[batalKey(o.no)] = { at: now, note: 'Otomatis: nominal faktur 0' }; });
+  try { localStorage.setItem(BATAL_KEY, JSON.stringify(BATAL)); }
+  catch (e) { showToast('⚠️ Gagal menyimpan tanda batal ke browser', 3000); return; }
+  for (let i = 0; i < rawData.length; i++) rawData[i].Batal = !!BATAL[batalKey(rawData[i]['No. Faktur'])];
+  processed = computeAll(filteredData);
+  bumpRenderVersion();
+  updateFilterCount();
+  switchTo(currentTab);
+  notifyDataChanged();
+  showToast('🚫 ' + list.length + ' faktur nominal 0 ditandai BATAL', 3500);
+}
+
+function buildDataHargaSheet() {
+  if (!rawData || !rawData.length) return null;
+  if (!DH.cache) DH.cache = computeDataHarga();
+  const rows = dhRows(); if (!rows.length) return null;
+  const mLabel = DH.bulan ? (DH.cache.months.find(m => m[0] === DH.bulan) || [0, DH.bulan])[1] : 'Semua bulan';
+  const now = new Date();
+  const tgl = now.toLocaleDateString('id-ID', { day: '2-digit', month: '2-digit', year: 'numeric' }) + ' ' + now.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+  const aoa = [['Data Harga'], [mLabel + ', data di save tgl: ' + tgl], [],
+    ['Produk', 'Satuan', 'Harga Beli', '', 'Harga Jual', '', 'Ket'],
+    ['', '', 'Terendah', 'Tertinggi', 'Terendah', 'Tertinggi', '']];
+  rows.forEach(p => aoa.push([p.produk, p.satuan || '', p.minB == null ? '' : p.minB, p.maxB == null ? '' : p.maxB, p.minJ == null ? '' : p.minJ, p.maxJ == null ? '' : p.maxJ, p.ket]));
+  const ws = XLSX.utils.aoa_to_sheet(aoa);
+  ws['!cols'] = [{ wch: 34 }, { wch: 9 }, { wch: 14 }, { wch: 14 }, { wch: 14 }, { wch: 14 }, { wch: 24 }];
+  ws['!merges'] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: 6 } }, { s: { r: 1, c: 0 }, e: { r: 1, c: 6 } },
+    { s: { r: 3, c: 0 }, e: { r: 4, c: 0 } }, { s: { r: 3, c: 1 }, e: { r: 4, c: 1 } },
+    { s: { r: 3, c: 2 }, e: { r: 3, c: 3 } }, { s: { r: 3, c: 4 }, e: { r: 3, c: 5 } }, { s: { r: 3, c: 6 }, e: { r: 4, c: 6 } }];
+  const t0 = ws['A1']; if (t0) t0.s = { font: { bold: true, sz: 14, color: { rgb: '1B3A5F' } } };
+  const t1 = ws['A2']; if (t1) t1.s = { font: { italic: true, sz: 10, color: { rgb: '64748B' } } };
+  const thin = { style: 'thin', color: { rgb: 'D0D5DD' } }, bd = { top: thin, bottom: thin, left: thin, right: thin };
+  for (let r = 3; r < aoa.length; r++) for (let c = 0; c < 7; c++) {
+    const ref = XLSX.utils.encode_cell({ r, c }); let cell = ws[ref];
+    if (!cell) { cell = { t: 's', v: '' }; ws[ref] = cell; }
+    if (r <= 4) {
+      cell.s = { font: { bold: true, sz: 11, color: { rgb: 'FFFFFF' } }, fill: { fgColor: { rgb: r === 4 ? '2F4A7A' : '1F3B73' } },
+        alignment: { horizontal: 'center', vertical: 'center' }, border: bd };
+    } else if (typeof cell.v === 'number') {
+      cell.t = 'n'; cell.z = '#,##0'; cell.s = { alignment: { horizontal: 'right' }, border: bd };
+    } else cell.s = { border: bd };
+  }
+  return ws;
+}
+
+function downloadCurrent() {
+  const wb = XLSX.utils.book_new();
+  let sheet, name;
+  switch (currentTab) {
+    case 'faktur': sheet = buildFakturSheet(); name = 'Faktur'; break;
+    case 'profitproduk': sheet = buildProfitProdukSheet(); name = 'Profit Per Produk'; break;
+    case 'databulanan': sheet = buildDataBulananSheet(); name = 'Data Bulanan'; break;
+    case 'dataharga': sheet = buildDataHargaSheet(); name = 'Data Harga'; break;
+  }
+  if (sheet) {
+    XLSX.utils.book_append_sheet(wb, sheet, name.substring(0, 31));
+    const d = new Date();
+    const ymd = d.getFullYear() + String(d.getMonth()+1).padStart(2,'0') + String(d.getDate()).padStart(2,'0');
+    const fname = name.replace(/\s+/g, '_') + '_' + ymd + '.xlsx';
+    XLSX.writeFile(wb, fname, { cellStyles: true });
+    showToast('⬇️ Excel diunduh: ' + fname, 2500);
+  } else if (currentTab === 'persales') {
+    showToast('Tidak ada data untuk diekspor', 2000);
+  }
+}
+
+/* ============================================================
+   🚫 FAKTUR NOMINAL 0 — MODAL & TRANSAKSI BATAL
+   ============================================================ */
+let _btNo = null;
+function closeBatalModal() {
+  const el = document.getElementById('batalModal');
+  if (el) el.classList.remove('open');
+  _btNo = null;
+}
+function openBatalModal(no) {
+  const rows = rawData.filter(r => r['No. Faktur'] === no);
+  if (!rows.length) return;
+  _btNo = no;
+  const f = rows[0], batal = isBatalNo(no), info = batal ? BATAL[batalKey(no)] : null;
+  let nominal = 0;
+  rows.forEach(r => { nominal += Number(r.Total) || 0; });
+  const qtyNF = new Intl.NumberFormat('id-ID', { maximumFractionDigits: 2 });
+  document.getElementById('btTitle').innerHTML = '🚫 Faktur ' + escapeHtml(no) + (batal ? ' — BATAL' : '');
+
+  const kv = [
+    ['Tanggal', fmtDate(f.Tanggal)], ['Sales', f.Sales], ['Customer', f.Customer], ['Alamat', f.Alamat],
+    ['Pembayaran', f.Pembayaran], ['Nominal faktur', 'Rp ' + fmtNum(nominal)]
+  ].map(x => '<div><span>' + escapeHtml(x[0]) + '</span><b>' + escapeHtml(x[1] || '-') + '</b></div>').join('');
+
+  const items = rows.map(r => '<tr class="' + ((Number(r.Jumlah) || 0) < 0 ? 'retur' : '') + '"><td>' + escapeHtml(r.Produk) + '</td>' +
+    '<td class="num">' + qtyNF.format(Number(r.Jumlah) || 0) + ' ' + escapeHtml(r.Satuan || '') + '</td>' +
+    '<td class="num">Rp ' + fmtNum(r['Harga Jual']) + '</td><td class="num">Rp ' + fmtNum(r.Total) + '</td></tr>').join('');
+
+  document.getElementById('btBody').innerHTML =
+    '<div class="bt-info' + (batal ? ' is-batal' : '') + '">' +
+    (batal
+      ? '<b>Faktur ini sudah ditandai BATAL</b>' + (info && info.at ? ' (' + new Date(info.at).toLocaleDateString('id-ID') + ')' : '') +
+        '. Barisnya dicoret dan tidak dihitung di total, jumlah faktur, ringkasan per sales, export Excel, maupun tab Cek.'
+      : 'Nominal faktur <b>Rp 0</b> (barang dan retur saling meniadakan). Kalau transaksi ini dibatalkan, semua isinya dicoret dan ' +
+        '<b>tidak dihubungkan ke mana pun</b>: total, jumlah faktur, ringkasan per sales, export Excel, dan tab Cek.') +
+    '</div>' +
+    '<div class="bt-kv">' + kv + '</div>' +
+    '<div class="bt-tw"><table><thead><tr><th>Produk</th><th class="num">Qty</th><th class="num">Harga jual</th><th class="num">Total</th></tr></thead><tbody>' + items + '</tbody></table></div>' +
+    '<label class="bt-lbl" for="btNote">Catatan (opsional)</label>' +
+    '<textarea class="bt-note" id="btNote" placeholder="Contoh: salah input, barang diretur penuh">' + escapeHtml(info && info.note || '') + '</textarea>';
+
+  document.getElementById('btFoot').innerHTML =
+    '<button class="btn" onclick="closeBatalModal()">Tutup</button>' +
+    (batal ? '<button class="btn" onclick="setBatal(_btNo, false)">↺ Kembalikan</button>'
+           : '<button class="btn danger" onclick="setBatal(_btNo, true)">✖ Transaksi Batal</button>');
+  document.getElementById('batalModal').classList.add('open');
+}
+
+function setBatal(no, on) {
+  const k = batalKey(no); if (!k) return;
+  const noteEl = document.getElementById('btNote'), note = noteEl ? noteEl.value.trim() : '';
+  if (on && !confirm('Tandai faktur ' + no + ' sebagai BATAL?\n\nSemua isinya akan dicoret dan tidak dihitung / dihubungkan ke mana pun.')) return;
+  if (on) BATAL[k] = { at: Date.now(), note }; else delete BATAL[k];
+  try { localStorage.setItem(BATAL_KEY, JSON.stringify(BATAL)); }
+  catch (e) { showToast('⚠️ Gagal menyimpan tanda batal ke browser', 3000); return; }
+  for (let i = 0; i < rawData.length; i++) if (batalKey(rawData[i]['No. Faktur']) === k) rawData[i].Batal = !!on;
+  closeBatalModal();
+  const sel = '.content.active .vt-wrap';
+  const sc = document.querySelector(sel), top = sc ? sc.scrollTop : 0;
+  processed = computeAll(filteredData);
+  bumpRenderVersion();
+  updateFilterCount();
+  switchTo(currentTab);
+  setTimeout(() => { const s2 = document.querySelector(sel); if (s2) s2.scrollTop = top; }, 30);
+  notifyDataChanged();
+  showToast(on ? '🚫 Faktur ' + no + ' ditandai BATAL' : '↺ Faktur ' + no + ' dikembalikan', 2800);
+}
+
+document.addEventListener('click', e => {
+  const a = e.target.closest && e.target.closest('a.fk0');
+  if (a) { e.preventDefault(); openBatalModal(a.getAttribute('data-no')); }
+});
+
+(async function initApp() {
+  await tryAutoLoad();
+})();
+</script>
+</body>
+</html>
