@@ -202,6 +202,7 @@ function categorize(ket, given) {
   if (/BAN |OLI|SERVIS|SERVICE|BENGKEL|SPAREPART|PERAWATAN/.test(k)) return 'PERAWATAN';
   if (/BEROBAT|OBAT|DOKTER|RS |KESEHATAN/.test(k)) return 'KESEHATAN';
   if (/INSENTIF|BONUS/.test(k)) return 'INSENTIF';
+  if (/MART|BELANJA|LISTRIK|PDAM|INTERNET|PULSA|BENSIN|BBM|SOLAR|SEWA|OPERASIONAL/.test(k)) return 'OPERASIONAL';
   return g || 'LAINNYA';
 }
 function parseAmount(v) {
@@ -216,7 +217,7 @@ function parseAmount(v) {
   const n = Number(s); return isFinite(n) ? n : 0;
 }
 function parseDate(v) {
-  if (v instanceof Date && !isNaN(v)) return v.getFullYear() + '-' + String(v.getMonth() + 1).padStart(2, '0') + '-' + String(v.getDate()).padStart(2, '0');
+  if (Object.prototype.toString.call(v) === '[object Date]' && !isNaN(v)) { const t = new Date(v.getTime() + 43200000); return t.getFullYear() + '-' + String(t.getMonth() + 1).padStart(2, '0') + '-' + String(t.getDate()).padStart(2, '0'); }
   if (typeof v === 'number' && v > 20000) { const u = new Date(Math.round((v - 25569) * 86400000)); return u.getUTCFullYear() + '-' + String(u.getUTCMonth() + 1).padStart(2, '0') + '-' + String(u.getUTCDate()).padStart(2, '0'); }
   const s = String(v == null ? '' : v).trim(); if (!s) return '';
   let m = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/); if (m) return m[1] + '-' + m[2].padStart(2, '0') + '-' + m[3].padStart(2, '0');
@@ -225,19 +226,28 @@ function parseDate(v) {
   return '';
 }
 function parseWorkbook(wb, fileName) {
-  const out = [], map = { tanggal:'tanggal', tgl:'tanggal', keterangan:'keterangan', uraian:'keterangan', deskripsi:'keterangan', kategori:'kategori',
-    jumlah:'jumlah', nominal:'jumlah', 'jumlah (rp)':'jumlah', total:'jumlah', rp:'jumlah' };
+  /* Header dicari otomatis (boleh ada judul di atasnya). Nama kolom yang dikenali:
+     tanggal: Tgl/Tanggal | keterangan: Pengeluaran/Keterangan/Uraian | kategori: Kategori | jumlah: Nominal/Jumlah/Total */
+  const ALIAS = { tanggal: ['tgl', 'tanggal', 'date'], keterangan: ['pengeluaran', 'keterangan', 'uraian', 'deskripsi', 'nama', 'item'],
+    kategori: ['kategori', 'kat'], jumlah: ['nominal', 'jumlah', 'jumlah (rp)', 'total', 'rp', 'nilai'] };
+  const out = [];
   wb.SheetNames.forEach(sn => {
-    const rows = XLSX.utils.sheet_to_json(wb.Sheets[sn], { defval: '', cellDates: true, raw: true });
+    const aoa = XLSX.utils.sheet_to_json(wb.Sheets[sn], { header: 1, defval: '', cellDates: true, raw: true });
+    let hr = -1, col = {};
+    for (let i = 0; i < Math.min(aoa.length, 20) && hr < 0; i++) {
+      const c = {};
+      aoa[i].forEach((v, j) => { const t = String(v).trim().toLowerCase(); for (const k in ALIAS) if (c[k] == null && ALIAS[k].indexOf(t) !== -1) c[k] = j; });
+      if (c.tanggal != null && c.keterangan != null && c.jumlah != null) { hr = i; col = c; }
+    }
+    if (hr < 0) return;
     let lastTgl = '';
-    rows.forEach(r => {
-      const o = {}; for (const k in r) o[map[String(k).trim().toLowerCase()] || String(k).trim().toLowerCase()] = r[k];
-      const tgl = parseDate(o.tanggal) || lastTgl;               /* tanggal kosong = ikut baris di atasnya (format rekap per tanggal) */
-      if (parseDate(o.tanggal)) lastTgl = tgl;
-      const ket = String(o.keterangan || '').trim(), jml = parseAmount(o.jumlah);
-      if (!tgl || !ket || !jml || /^total/i.test(ket)) return;
-      out.push({ id: uid(), tanggal: tgl, bulan: tgl.slice(0, 7), keterangan: ket, kategori: categorize(ket, o.kategori), jumlah: jml, sumber: fileName });
-    });
+    for (let i = hr + 1; i < aoa.length; i++) {
+      const r = aoa[i], d = parseDate(r[col.tanggal]);
+      if (d) lastTgl = d;                                         /* tanggal kosong = ikut baris di atasnya */
+      const ket = String(r[col.keterangan] == null ? '' : r[col.keterangan]).trim(), jml = parseAmount(r[col.jumlah]);
+      if (!lastTgl || !ket || !jml || /^total/i.test(ket)) continue;
+      out.push({ id: uid(), tanggal: lastTgl, bulan: lastTgl.slice(0, 7), keterangan: ket, kategori: categorize(ket, col.kategori != null ? r[col.kategori] : ''), jumlah: jml, sumber: fileName });
+    }
   });
   return out;
 }
@@ -313,7 +323,10 @@ function handleFile(file) {
     try {
       const wb = XLSX.read(e.target.result, { type: 'array', cellDates: true });
       const inc = parseWorkbook(wb, file.name);
-      if (!inc.length) throw new Error('Tidak ada baris valid. Kolom yang dibaca: Tanggal, Keterangan, (Kategori), Jumlah.');
+      if (!inc.length) throw new Error('Tidak ada baris valid. Pastikan ada baris header dengan kolom: Tgl (Tanggal), Pengeluaran (Keterangan), Nominal (Jumlah).');
+      /* data awal bawaan & hasil upload sebelumnya dari file yang sama untuk bulan yang sama diganti, supaya tidak dobel */
+      const bln = new Set(inc.map(r => r.bulan));
+      allKasBesar = allKasBesar.filter(r => !((r.sumber === 'data-awal' && bln.has(r.bulan)) || r.sumber === file.name));
       const seen = new Set(allKasBesar.map(rowKey)); let add = 0, dup = 0;
       inc.forEach(r => { const k = rowKey(r); if (seen.has(k)) dup++; else { seen.add(k); allKasBesar.push(r); add++; } });
       persist(true); renderAll();
