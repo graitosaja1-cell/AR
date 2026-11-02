@@ -140,6 +140,7 @@
    Setiap baris: { id, tanggal:'YYYY-MM-DD', bulan:'YYYY-MM', keterangan, kategori, jumlah, sumber }
    `allKasBesar` sengaja global supaya tab lain (mis. Neraca) bisa membacanya lewat contentWindow. */
 let allKasBesar = [];
+let kasBesarReady = false;   /* true setelah data selesai dimuat dari IndexedDB; dibaca tab Neraca */
 const IDB_NAME = 'kas-besar-db', IDB_STORE = 'data', IDB_KEY = 'latest';
 const CATS = ['GAJI', 'PERAWATAN', 'OPERASIONAL', 'PAJAK', 'KESEHATAN', 'INSENTIF', 'LAINNYA'];
 const MONTHS = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
@@ -152,7 +153,8 @@ const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 
 let currentTab = 'rincian', _toastT = null, _bc = null;
 
 function toast(m, ms) { const el = $('#toast'); el.textContent = m; el.classList.add('show'); clearTimeout(_toastT); _toastT = setTimeout(() => el.classList.remove('show'), ms || 2500); }
-function notifyChanged() { try { if (!_bc && 'BroadcastChannel' in window) _bc = new BroadcastChannel('kasbesar-sync'); if (_bc) _bc.postMessage({ type: 'data-changed' }); } catch (e) {} }
+function bc() { try { if (!_bc && 'BroadcastChannel' in window) { _bc = new BroadcastChannel('kasbesar-sync'); _bc.onmessage = () => loadFromIDB(); } } catch (e) {} return _bc; }
+function notifyChanged() { try { const c = bc(); if (c) c.postMessage({ type: 'data-changed' }); } catch (e) {} }
 
 /* ===================== INDEXEDDB ===================== */
 function idbOpen() {
@@ -395,7 +397,7 @@ $('#delOk').addEventListener('click', confirmDel);
 $('#delList').addEventListener('change', () => { const n = document.querySelectorAll('#delList input:checked').length; $('#delOk').disabled = !n; $('#delOk').textContent = n ? 'Hapus ' + n + ' Bulan' : 'Hapus Terpilih'; });
 document.addEventListener('keydown', e => { if (e.key === 'Escape') { $('#ovDel').classList.remove('show'); dd.classList.remove('open'); } });
 /* sinkron antar-perangkat/tab: bila data diubah dari luar (mis. restore backup), muat ulang */
-try { new BroadcastChannel('kasbesar-sync').onmessage = () => loadFromIDB(); } catch (e) {}
+bc();
 
 async function loadFromIDB() {
   try {
@@ -404,6 +406,7 @@ async function loadFromIDB() {
     else if (!allKasBesar.length) { allKasBesar = seedData(); await persist(true); }
   } catch (e) { console.warn('[idb] load fail', e); if (!allKasBesar.length) allKasBesar = seedData(); }
   renderAll();
+  if (!kasBesarReady) { kasBesarReady = true; notifyChanged(); }   /* kabari Neraca bahwa data siap dibaca */
 }
 loadFromIDB();
 </script>

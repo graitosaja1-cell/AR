@@ -72,6 +72,7 @@
   #kasBesarList,#hutangList,#masukList,#bebanList,#adjProfitList{display:flex;flex-direction:column}
   .row-edit{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:2px 0;border-bottom:1px dashed var(--line)}
   .row-edit:last-child{border-bottom:0}
+  .row-edit.kb-locked input{cursor:default}
   .row-edit input.lbl-input{flex:1;min-width:0;padding:7px 10px;font-size:13px;border:1px solid transparent;background:transparent;color:#334155;border-radius:6px;font-family:inherit;transition:background .12s,border-color .12s}
   .row-edit input.lbl-input:hover{background:#f8fafc;border-color:var(--line)}
   .row-edit input.lbl-input:focus{background:#fff;border-color:var(--accent);outline:2px solid #bae6fd}
@@ -251,7 +252,7 @@
       <div id="masukList"></div>
       <button type="button" class="btn-add" id="btnAddMasuk">+ Tambah Baris</button>
       <div class="row total" style="margin-top:8px"><span>Total Uang Masuk</span><span class="num" data-out="totalMasuk">0</span></div>
-      <div class="sec">Pengeluaran Kas Besar</div>
+      <div class="sec" style="display:flex;justify-content:space-between;align-items:center">Pengeluaran Kas Besar <button type="button" class="lnk" id="kbLnk" style="width:26px;height:24px">🔗</button></div>
       <div id="kasBesarList"></div>
       <button type="button" class="btn-add" id="btnAddKasBesar">+ Tambah Baris</button>
       <div class="row total" style="margin-top:8px"><span>Subtotal Kas Besar</span><span class="num" data-out="kasBesar">0</span></div>
@@ -522,14 +523,18 @@ function renderKasBesar(){
 
     const lbl=document.createElement('input');
     lbl.type='text';lbl.className='lbl-input';lbl.placeholder='Nama item…';lbl.value=item.label||'';
-    lbl.addEventListener('input',()=>{data.kasBesarItems[idx].label=lbl.value;persist()});
+    const locked=!!item.kbid&&kbMode()==='auto';
+    if(locked){lbl.readOnly=true;lbl.title='Otomatis dari tab Kas Besar (ubah/hapus di tab Kas Besar)';row.classList.add('kb-locked')}
+    lbl.addEventListener('input',()=>{if(locked)return;data.kasBesarItems[idx].label=lbl.value;persist()});
 
     const wrap=document.createElement('div');wrap.className='val-wrap';
 
     const val=document.createElement('input');
     val.type='text';val.inputMode='numeric';val.className='val-input';val.autocomplete='off';
     val.value=item.value?fmt(item.value):'';
+    if(locked)val.readOnly=true;
     val.addEventListener('input',()=>{
+      if(locked)return;
       const v=parseNum(val.value);data.kasBesarItems[idx].value=v;
       val.value=v?fmt(v):'';persist();compute();
     });
@@ -541,7 +546,7 @@ function renderKasBesar(){
       data.kasBesarItems.splice(idx,1);persist(true);renderKasBesar();compute();
     });
 
-    wrap.appendChild(val);wrap.appendChild(del);
+    wrap.appendChild(val);if(!locked)wrap.appendChild(del);
     row.appendChild(lbl);row.appendChild(wrap);
     list.appendChild(row);
   });
@@ -782,6 +787,8 @@ function periodeMonthList(){
     if(Array.isArray(um)){const s=new Set();for(let i=0;i<um.length;i++){const n=Number(um[i].bulanNum);if(n>=100000)s.add(String(n).slice(0,4)+'-'+String(n).slice(4))}s.forEach(k=>set.add(k))}
     const kk=lkFrame('frame-kaskecil','typeof allExpenses!=="undefined"?allExpenses:null');
     if(Array.isArray(kk)){const s=new Set();for(let i=0;i<kk.length;i++){const k=kk[i].bulan;if(k)s.add(k)}s.forEach(k=>set.add(k))}
+    const kb=lkFrame('frame-kasbesar',KB_EXPR);
+    if(Array.isArray(kb)){const s=new Set();for(let i=0;i<kb.length;i++){const k=kb[i].bulan;if(k)s.add(k)}s.forEach(k=>set.add(k))}
   }catch(e){}
   let list=[...set].filter(k=>/^\d{4}-\d{2}$/.test(k)).sort();
   /* tambahkan 1 bulan setelah bulan terakhir, supaya bisa mulai mengisi bulan baru */
@@ -1888,7 +1895,8 @@ document.getElementById('btnCopy').onclick=()=>{
   const src=keys[keys.length-1];
   if(!confirm('Salin angka dari periode '+monthLabel(src)+' ke '+monthLabel(periode)+' ?'))return;
   data=migrate(JSON.parse(JSON.stringify(allData[src])));
-  data.kasBesarItems=(data.kasBesarItems||[]).map(it=>({...it,id:uid()}));
+  data.kasBesarItems=(data.kasBesarItems||[]).filter(it=>!it.kbid).map(it=>({...it,id:uid()}));
+  if(data._link)delete data._link.kasBesar;
   data.hutangItems=(data.hutangItems||[]).map(it=>({...it,id:uid()}));
   data.masukItems=[];
   Object.keys(LINKS).forEach(k=>lkSet(k,'auto'));persist(true);renderAll();lkApply();toast('Disalin dari '+monthLabel(src));
@@ -1936,10 +1944,12 @@ const LINKS={
   profitFitri:{tab:'Penjualan',src:'pen',f:'profitM'},
   profitRupa:{tab:'Penjualan',src:'pen',f:'profitR'}
 };
-const LK_SRC_NAME={pen:'Penjualan',um:'Uang Masuk',kk:'Kas Kecil'};
+const LK_SRC_NAME={pen:'Penjualan',um:'Uang Masuk',kk:'Kas Kecil',kb:'Kas Besar'};
+/* tab Kas Besar baru dianggap siap setelah datanya selesai dimuat dari IndexedDB (kasBesarReady), supaya tidak mengosongkan item saat belum termuat */
+const KB_EXPR='(typeof kasBesarReady!=="undefined"&&kasBesarReady&&typeof allKasBesar!=="undefined")?allKasBesar:null';
 function lkFrame(id,expr){try{return window.parent.document.getElementById(id).contentWindow.eval(expr)}catch(e){return null}}
 function lkSources(p){
-  const out={pen:null,um:null,kk:null};
+  const out={pen:null,um:null,kk:null,kb:null};
   try{
     const pen=lkFrame('frame-penjualan','typeof rawData!=="undefined"?rawData:null');
     if(Array.isArray(pen)){
@@ -1970,28 +1980,84 @@ function lkSources(p){
       }
       if(n)out.kk={n,total:t};
     }
+    const kbAll=lkFrame('frame-kasbesar',KB_EXPR);
+    if(Array.isArray(kbAll)){
+      const rows=[];
+      for(let i=0;i<kbAll.length;i++){const r=kbAll[i];if(r.bulan!==p)continue;rows.push({id:String(r.id),tgl:String(r.tanggal),label:String(r.keterangan||''),value:Math.round(Number(r.jumlah)||0)})}
+      rows.sort((a,b)=>a.tgl<b.tgl?-1:a.tgl>b.tgl?1:0);
+      out.kb={n:rows.length,total:rows.reduce((t,r)=>t+r.value,0),rows};
+    }
   }catch(e){console.error('Neraca link:',e)}
   return out;
 }
 function lkSet(k,m){if(!data._link||typeof data._link!=='object')data._link={};data._link[k]=m}
 function lkMode(k){const m=data._link&&data._link[k];if(m)return m;return (Number(data[k])||0)===0?'auto':'manual'}
 function setLinkManual(k){if(LINKS[k]&&lkMode(k)!=='manual'){lkSet(k,'manual');lkPaint()}}
+/* ---- Pengeluaran Kas Besar: item otomatis dari tab Kas Besar (per periode) ----
+   Item hasil tarikan diberi penanda kbid. Item manual (tanpa kbid) tidak pernah disentuh sinkron. */
+function kbSet(m){if(!data._link||typeof data._link!=='object')data._link={};data._link.kasBesar=m}
+function kbMode(){
+  const m=data._link&&data._link.kasBesar;if(m)return m;
+  const it=Array.isArray(data.kasBesarItems)?data.kasBesarItems:[];
+  return it.some(x=>!x.kbid&&(Number(x.value)||0)!==0)?'manual':'auto';   /* bulan lama yang sudah terisi manual dibiarkan manual */
+}
+function kbSync(S){
+  const s=S&&S.kb;if(!s||!data||kbMode()!=='auto')return false;
+  const cur=Array.isArray(data.kasBesarItems)?data.kasBesarItems:[];
+  if(!s.rows.length&&!cur.some(x=>x.kbid))return false;
+  const norm=t=>String(t||'').trim().toLowerCase(),labels=new Set(s.rows.map(r=>norm(r.label)));
+  const old=new Map(cur.filter(x=>x.kbid).map(x=>[x.kbid,x]));
+  /* isian manual bernilai 0 yang namanya sama dengan baris Kas Besar (mis. "Gaji Karyawan" bawaan) dibuang agar tidak dobel */
+  const manual=cur.filter(x=>!x.kbid&&!((Number(x.value)||0)===0&&labels.has(norm(x.label))));
+  const kb=s.rows.map(r=>({id:(old.get(r.id)||{}).id||uid(),kbid:r.id,label:r.label,value:r.value}));
+  const next=kb.concat(manual);
+  if(JSON.stringify(next)===JSON.stringify(cur)&&data._link&&data._link.kasBesar==='auto')return false;
+  data.kasBesarItems=next;kbSet('auto');return true;
+}
+function kbPaint(){
+  const b=document.getElementById('kbLnk');if(!b)return;
+  const s=lkLast&&lkLast.kb,mode=kbMode(),has=!!(s&&s.n);
+  b.classList.toggle('on',mode==='auto'&&has);b.classList.toggle('wait',mode==='auto'&&!has);
+  b.title=mode==='auto'
+    ?(has?'Otomatis dari tab Kas Besar ('+monthLabel(periode)+'): '+s.n+' baris, Rp '+fmt(s.total)+'. Klik untuk ubah ke manual.':'Mode otomatis, tapi belum ada data '+monthLabel(periode)+' di tab Kas Besar.')
+    :'Manual.'+(has?' Tab Kas Besar punya '+s.n+' baris (Rp '+fmt(s.total)+') untuk bulan ini.':'')+' Klik untuk tarik otomatis dari tab Kas Besar.';
+}
+function kbToggle(){
+  if(kbMode()==='auto'){
+    kbSet('manual');(data.kasBesarItems||[]).forEach(x=>{delete x.kbid});   /* hasil tarikan jadi isian biasa, nilainya tetap */
+    persist(true);renderKasBesar();kbPaint();toast('Kas Besar: mode manual');return;
+  }
+  const S=lkSources(periode);lkLast=S;const s=S.kb;
+  if(!s){toast('Tab Kas Besar belum siap dimuat, coba lagi sebentar');kbPaint();return}
+  if(!s.n){toast('Belum ada data '+monthLabel(periode)+' di tab Kas Besar');kbPaint();return}
+  const items=Array.isArray(data.kasBesarItems)?data.kasBesarItems:[];
+  const manualVal=items.filter(x=>!x.kbid&&(Number(x.value)||0)!==0);
+  if(manualVal.length){
+    const t=manualVal.reduce((a,x)=>a+(Number(x.value)||0),0);
+    if(!confirm('Tarik Kas Besar '+monthLabel(periode)+' dari tab Kas Besar?\n\n• '+s.n+' baris (Rp '+fmt(s.total)+') akan diisi otomatis.\n• '+manualVal.length+' isian manual bernilai (Rp '+fmt(t)+') akan DIGANTI.\n• Isian bernilai 0 (mis. Jasa Manajemen) tetap ada.\n\nLanjut?'))return;
+    data.kasBesarItems=items.filter(x=>x.kbid||(Number(x.value)||0)===0);
+  }
+  kbSet('auto');kbSync(S);
+  persist(true);renderKasBesar();compute();renderRiwayat();kbPaint();toast('Kas Besar ditarik: '+s.n+' baris');
+}
+document.getElementById('kbLnk').addEventListener('click',kbToggle);
 let lkLast=null;
 function lkApply(){
   if(!ready||!data)return;
   const S=lkSources(periode);lkLast=S;
-  let changed=false;
+  let changed=kbSync(S);
   for(const k in LINKS){
     const L=LINKS[k],s=S[L.src];
     if(!s||lkMode(k)!=='auto')continue;
     const v=Math.round(s[L.f]);
     if((Number(data[k])||0)!==v||!(data._link&&data._link[k]==='auto')){data[k]=v;lkSet(k,'auto');changed=true}
   }
-  if(changed){renderInputs();compute();persist();renderRiwayat()}
+  if(changed){renderInputs();renderKasBesar();compute();persist();renderRiwayat()}
   lkPaint();
 }
 function lkPaint(){
-  const S=lkLast||{pen:null,um:null,kk:null};
+  try{kbPaint()}catch(e){}
+  const S=lkLast||{pen:null,um:null,kk:null,kb:null};
   document.querySelectorAll('input[data-k]').forEach(el=>{
     const k=el.dataset.k,L=LINKS[k];if(!L)return;
     let wrap=el.parentElement;
@@ -2024,7 +2090,7 @@ function lkToggle(k){
 window.linkRefresh=function(){try{syncPeriodeSelect()}catch(e){}try{lkApply()}catch(e){console.error(e)}};
 (function(){
   let t=null;const deb=()=>{clearTimeout(t);t=setTimeout(window.linkRefresh,400)};
-  try{['laporan-data','kaskecil-sync'].forEach(n=>{new BroadcastChannel(n).onmessage=deb})}catch(e){}
+  try{['laporan-data','kaskecil-sync','kasbesar-sync'].forEach(n=>{new BroadcastChannel(n).onmessage=deb})}catch(e){}
   document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')deb()});
   /* data tab lain dimuat dari IndexedDB setelah halaman terbuka -> cek ulang beberapa kali di awal */
   [2000,5000,10000,20000].forEach(ms=>setTimeout(window.linkRefresh,ms));

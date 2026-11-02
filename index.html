@@ -205,10 +205,10 @@
 </div>
 <script>
 /* Tiap tab = file HTML terpisah (satu folder dengan index.html, satu origin -> tema & contentWindow tetap jalan).
-   EAGER  : penjualan, uangmasuk, kaskecil -> dibaca langsung oleh tab Neraca (lkFrame) & penanda 'Data Penjualan terakhir'.
-   LAZY   : kasbesar, ar, hd, neraca, invoice -> dimuat saat tab pertama kali dibuka. */
+   EAGER  : penjualan, uangmasuk, kaskecil, kasbesar -> dibaca langsung oleh tab Neraca (lkFrame) & penanda 'Data Penjualan terakhir'.
+   LAZY   : ar, hd, neraca, invoice -> dimuat saat tab pertama kali dibuka. */
 const TAB_FILE = { penjualan:'penjualan.html', uangmasuk:'uangmasuk.html', kaskecil:'kaskecil.html', kasbesar:'KAS-BESAR.html', ar:'ar.html', hd:'hd.html', neraca:'neraca.html', invoice:'INVOICE.html' };
-const EAGER = ['penjualan', 'uangmasuk', 'kaskecil'];
+const EAGER = ['penjualan', 'uangmasuk', 'kaskecil', 'kasbesar'];
 function loadTab(k) { const f = document.getElementById('frame-' + k); if (f && TAB_FILE[k] && !f.getAttribute('src')) f.src = TAB_FILE[k]; }
 EAGER.forEach(loadTab);
 /* Tab Stok SFA = file HTML terpisah (STOK-SFA.html, satu folder dengan index.html). Satu origin -> tema ikut terbagi. */
