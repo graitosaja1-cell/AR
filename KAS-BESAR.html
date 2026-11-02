@@ -261,10 +261,19 @@ function filtered() {
   return allKasBesar.filter(r => (!b || r.bulan === b) && (!q || (r.keterangan + ' ' + r.kategori).toLowerCase().indexOf(q) !== -1))
     .sort((a, c) => a.tanggal < c.tanggal ? -1 : a.tanggal > c.tanggal ? 1 : 0);
 }
+/* Filter Bulan awal = bulan terkini (bulan kalender sekarang bila ada datanya, jika tidak bulan terakhir di data).
+   Pilihan pengguna (termasuk "Semua") dihormati sampai tombol Reset ditekan. */
+let bulanTouched = false;
+function defaultMonthKey() {
+  const ks = [...new Set(allKasBesar.map(r => r.bulan))].sort();
+  if (!ks.length) return '';
+  const d = new Date(), cur = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
+  return ks.indexOf(cur) !== -1 ? cur : ks[ks.length - 1];
+}
 function buildBulanOptions() {
   const sel = $('#fBulan'), cur = sel.value, ks = [...new Set(allKasBesar.map(r => r.bulan))].sort();
   sel.innerHTML = '<option value="">Semua</option>' + ks.map(k => '<option value="' + k + '">' + bulanLabel(k) + '</option>').join('');
-  sel.value = ks.indexOf(cur) !== -1 ? cur : '';
+  sel.value = (bulanTouched && (cur === '' || ks.indexOf(cur) !== -1)) ? cur : defaultMonthKey();
 }
 function updateCards() {
   const d = filtered(), tot = d.reduce((s, r) => s + r.jumlah, 0), kats = new Set(d.map(r => r.kategori)), ms = [...new Set(d.map(r => r.bulan))].sort();
@@ -379,8 +388,8 @@ $('#aKat').innerHTML = CATS.map(c => '<option>' + c + '</option>').join('');
 $('#aTgl').value = new Date().toISOString().slice(0, 10);
 document.querySelectorAll('.tab').forEach(t => t.addEventListener('click', () => switchTab(t.dataset.tab)));
 $('#fSearch').addEventListener('input', () => { clearTimeout(window._ft); window._ft = setTimeout(renderAll, 200); });
-$('#fBulan').addEventListener('change', renderAll);
-$('#btnReset').addEventListener('click', () => { $('#fSearch').value = ''; $('#fBulan').value = ''; renderAll(); });
+$('#fBulan').addEventListener('change', () => { bulanTouched = true; renderAll(); });
+$('#btnReset').addEventListener('click', () => { $('#fSearch').value = ''; bulanTouched = false; renderAll(); });
 $('#btnAdd').addEventListener('click', addRow);
 $('#wrap-rincian').addEventListener('click', e => { const b = e.target.closest('[data-del]'); if (b) delRow(b.getAttribute('data-del')); });
 const dd = $('#menuDd');

@@ -937,14 +937,24 @@ function updateStats() {
   document.getElementById('cardPeriodSub').textContent = months.length + ' bulan';
   document.getElementById('cardFiles').textContent = uploadedFiles.length;
 }
+/* Filter Bulan awal = bulan terkini (bulan kalender sekarang bila ada datanya, jika tidak bulan terakhir yang ada di data).
+   Begitu pengguna memilih bulan sendiri (termasuk "Semua"), pilihannya dihormati sampai tombol Reset ditekan. */
+let _bulanTouched = false;
+function defaultMonthKey() {
+  const keys = [...new Set(allExpenses.concat(allKasbon).map(e => e.bulan).filter(Boolean))].sort();
+  if (!keys.length) return '';
+  const d = new Date(), cur = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
+  return keys.indexOf(cur) !== -1 ? cur : keys[keys.length - 1];
+}
 function updateMonthFilter() {
   const sel = document.getElementById('filterBulan');
   const cur = sel.value;
   const months = [...new Set(allExpenses.concat(allKasbon).map(e => e.bulan))].sort();
   sel.innerHTML = '<option value="all">Semua</option>' +
     months.map(m => `<option value="${escHtml(m)}">${escHtml(monthLabel(m))}</option>`).join('');
-  if ([...sel.options].some(o => o.value === cur)) sel.value = cur;
-  else sel.value = 'all';
+  const valid = [...sel.options].some(o => o.value === cur);
+  if (_bulanTouched && valid) sel.value = cur;
+  else sel.value = defaultMonthKey() || 'all';
 }
 function applyFilter(records) {
   const m = document.getElementById('filterBulan').value;
@@ -1060,7 +1070,8 @@ function confirmNewUpload() {
 /* ===================== RESET ===================== */
 function resetFilters() {
   document.getElementById('fSearch').value = '';
-  document.getElementById('filterBulan').value = 'all';
+  _bulanTouched = false;
+  document.getElementById('filterBulan').value = defaultMonthKey() || 'all';
   renderAll();
 }
 function resetApp() {
@@ -1771,7 +1782,7 @@ document.addEventListener('keydown', e => {
 
 /* ===================== EVENTS ===================== */
 document.getElementById('fSearch').addEventListener('input', scheduleRender);
-document.getElementById('filterBulan').addEventListener('change', renderAll);
+document.getElementById('filterBulan').addEventListener('change', () => { _bulanTouched = true; renderAll(); });
 document.getElementById('btnResetBar').addEventListener('click', resetFilters);
 document.getElementById('btnResetMenu').addEventListener('click', () => { resetFilters(); menuDropdown.classList.remove('open'); });
 document.getElementById('menuNewUpload').addEventListener('click', () => { menuDropdown.classList.remove('open'); confirmNewUpload(); });
