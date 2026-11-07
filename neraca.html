@@ -987,6 +987,13 @@ function fillMonthSheet(ws,p){
   put(pr+6,6,'Total Pengeluaran Kas (Besar+kecil)',{numFmt:XLS_F_D});
   put(pr+6,7,r.totalPengeluaranKas,{numFmt:XLS_F_P});
   put(pr+7,7,'=SUM(G'+(pr+3)+'-G'+(pr+6)+')',{numFmt:XLS_F_I});
+  /* penyesuaian profit bersih (mis. Pak Akif, Kas Bon) */
+  const adj=Array.isArray(d.adjProfitItems)?d.adjProfitItems:[];
+  if(adj.length){
+    adj.forEach((it,i)=>{put(pr+8+i,6,it.label||'Penyesuaian');put(pr+8+i,7,Number(it.value)||0,{numFmt:XLS_F_I,align:'right'})});
+    put(pr+8+adj.length,6,'PROFIT BERSIH (setelah penyesuaian)',{bold:true});
+    put(pr+8+adj.length,7,'=SUM(G'+(pr+7)+':G'+(pr+7+adj.length)+')',{numFmt:XLS_F_I,bold:true,align:'right'});
+  }
   return L;
 }
 
@@ -1194,6 +1201,22 @@ function writeMonthIntoTemplate(ws,p){
   set('F',rFit-1,'PROFIT PENJUALAN '+xlsMonthShortYear(p));
   set('G',rFit,g('profitFitri')); set('G',rFit+1,g('profitRupa')); set('G',rFit+2,r.totalProfit);
   set('G',rFit+5,r.totalPengeluaranKas); set('G',rFit+6,'=SUM(G'+(rFit+2)+'-G'+(rFit+5)+')');
+  /* penyesuaian profit bersih (mis. Pak Akif, Kas Bon) */
+  { const adj=Array.isArray(d.adjProfitItems)?d.adjProfitItems:[];
+    if(adj.length){
+      const stF=ws.getCell('F'+(rFit+5)).style, stG=ws.getCell('G'+(rFit+6)).style;
+      adj.forEach((it,i)=>{
+        const rr=rFit+7+i;
+        const cf=ws.getCell('F'+rr), cg=ws.getCell('G'+rr);
+        cf.style=cloneSt(stF); cg.style=cloneSt(stG);
+        cf.value=it.label||'Penyesuaian'; cg.value=Number(it.value)||0; cg.numFmt=XLS_F_I;
+      });
+      const rt=rFit+7+adj.length;
+      const tf=ws.getCell('F'+rt), tg=ws.getCell('G'+rt);
+      tf.style=cloneSt(stF); tg.style=cloneSt(stG);
+      tf.value='PROFIT BERSIH (setelah penyesuaian)'; tf.font=Object.assign({},tf.font||{},{bold:true});
+      tg.value={formula:'SUM(G'+(rFit+6)+':G'+(rt-1)+')'}; tg.numFmt=XLS_F_I; tg.font=Object.assign({},tg.font||{},{bold:true});
+    } }
 
   items.forEach((it,i)=>{set('A',sh(rKB)+1+i,it.label||'');set('B',sh(rKB)+1+i,Number(it.value)||0)});
   if(N>0)set('B',sumRow,'=SUM(B'+(sh(rKB)+1)+':B'+(sh(rKB)+N)+')');
