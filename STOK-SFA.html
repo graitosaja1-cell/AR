@@ -546,6 +546,30 @@ const state = { month: 'ALL', category: 'ALL', search: '' };
 
 const $ = (id) => document.getElementById(id);
 
+/* Urutan bulan: kronologis (tahun, lalu bulan), bukan urutan upload */
+function periodeKey(p) {
+  const m = String(p).toLowerCase().match(new RegExp('(' + MONTH_NAMES.join('|') + ')\\s*(\\d{4})'));
+  return m ? parseInt(m[2], 10) * 100 + MONTH_NAMES.indexOf(m[1]) : Infinity;
+}
+function cleanPeriode(p) {
+  return String(p).replace(/\s*\([^)]*\)/g, '').replace(/\s+/g, ' ').trim();
+}
+function monthKeys() {
+  return Object.keys(DB).sort((a, b) => periodeKey(a) - periodeKey(b) || a.localeCompare(b));
+}
+/* Rapikan nama periode lama yang terlanjur memuat "(SFA Stok Akhir Bulan)" */
+(function fixPeriodKeys() {
+  let changed = false;
+  Object.keys(DB).forEach((k) => {
+    const nk = cleanPeriode(k);
+    if (nk !== k && nk) {
+      if (!DB[nk]) { DB[nk] = DB[k]; DB[nk].periode = nk; }
+      delete DB[k]; changed = true;
+    }
+  });
+  if (changed) { try { localStorage.setItem(LS_KEY, JSON.stringify(DB)); } catch (e) {} }
+})();
+
 
 /* =========================================================
    CATATAN  (catatan baru ditambahkan di PALING ATAS array)
@@ -689,7 +713,7 @@ function parseWorkbook(wb, fileName) {
     const inp = prompt('Periode tidak terdeteksi. Masukkan periode data (contoh: Juli 2026):', 'Juli 2026');
     periode = (inp || 'Tanpa Periode').trim();
   }
-  periode = titleCase(periode);
+  periode = titleCase(cleanPeriode(periode));
 
   const items = [];
   const warnings = [];
@@ -876,7 +900,7 @@ function exportExcel(monthsArr) {
 }
 
 function openExportModal() {
-  const months = Object.keys(DB);
+  const months = monthKeys();
   if (!months.length) { toast('Tidak ada data untuk disimpan', 'err'); return; }
 
   $('exportList').innerHTML = months.map((m) => `
@@ -974,7 +998,7 @@ function buildSummaryTable(months) {
    ========================================================= */
 function renderMonthFilter() {
   const sel = $('monthFilter');
-  const months = Object.keys(DB);
+  const months = monthKeys();
 
   if (!months.length) {
     sel.innerHTML = '<option value="ALL">Data Bulanan</option>';
@@ -999,7 +1023,7 @@ function renderMonthFilter() {
    RENDER UTAMA
    ========================================================= */
 function render() {
-  const months = Object.keys(DB);
+  const months = monthKeys();
 
   if (state.month !== 'ALL' && !DB[state.month]) state.month = 'ALL';
 
