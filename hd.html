@@ -610,20 +610,34 @@ function buildTableSudah(rows){
       <col style="width:20%">
     </colgroup>`;
   if (!rows.length) {
-    return `<table>${colgroup}<thead><tr>
+    return `<table id="tblSudah">${colgroup}<thead><tr>
       <th>Tgl Bayar</th><th>Supplier</th>
       <th style="text-align:right">Nominal Bayar</th>
       <th>Keterangan</th><th>Aksi</th>
     </tr></thead><tbody>
-      <tr><td colspan="5" class="empty">Belum ada data</td></tr>
+      <tr><td colspan="5" class="empty">Belum ada data. Klik <b>+ Tambah Data</b> untuk mulai.</td></tr>
     </tbody></table>`;
   }
   const total = hitungTotal(rows);
   const body = rows.map((r,i) => `
     <tr>
-      <td title="${r[0]||''}">${fmtDate(r[0])}</td>
-      <td title="${escapeAttr(r[1])}">${r[1] || "-"}</td>
-      <td class="num">${rupiah(r[2])}</td>
+      <td>
+        <input class="cell-input" type="date"
+               value="${r[0]||''}"
+               data-mode="sudah" data-idx="${i}" data-field="0">
+      </td>
+      <td>
+        <input class="cell-input" type="text"
+               value="${escapeAttr(r[1])}"
+               data-mode="sudah" data-idx="${i}" data-field="1"
+               placeholder="(nama supplier)">
+      </td>
+      <td class="num">
+        <input class="cell-input num" type="text" inputmode="numeric"
+               value="${formatRibuan(r[2])}"
+               data-mode="sudah" data-idx="${i}" data-field="2"
+               placeholder="0">
+      </td>
       <td>
         <input class="cell-input" type="text"
                value="${escapeAttr(r[3])}"
@@ -646,7 +660,7 @@ function buildTableSudah(rows){
     <tbody>${body}
       <tr class="total-row">
         <td colspan="2">TOTAL</td>
-        <td class="num">${rupiah(total)}</td>
+        <td class="num" id="totalSudah">${rupiah(total)}</td>
         <td colspan="2"></td>
       </tr>
     </tbody>
@@ -720,7 +734,10 @@ function render(){
   const totalBelum = hitungTotal(d.belumDibayar);
 
   panel.innerHTML = `
-    <h2>✅ Hutang Dagang yang Sudah Dibayar — ${currentBulan}</h2>
+    <h2>
+      <span>✅ Hutang Dagang yang Sudah Dibayar — ${currentBulan}</span>
+      <button class="btn-tambah" id="btnTambahSudah">+ Tambah Data</button>
+    </h2>
     ${buildTableSudah(d.sudahDibayar)}
 
     <h2 class="belum">
@@ -732,7 +749,7 @@ function render(){
     <div class="summary">
       <div class="card">
         <div class="label">Sudah Dibayar</div>
-        <div class="value">${rupiah(totalSudah)}</div>
+        <div class="value" id="sumSudah">${rupiah(totalSudah)}</div>
       </div>
       <div class="card belum">
         <div class="label">Belum Dibayar</div>
@@ -782,6 +799,10 @@ panelEl.addEventListener("input", e => {
 });
 
 panelEl.addEventListener("click", e => {
+  if (e.target.closest("#btnTambahSudah")) {
+    tambahBarisSudah();
+    return;
+  }
   if (e.target.closest("#btnTambah")) {
     tambahBarisBelum();
     return;
@@ -809,12 +830,20 @@ panelEl.addEventListener("keydown", e => {
     e.preventDefault();
     tambahBarisBelum();
   }
+  if (inp.dataset.mode === "sudah" && inp.dataset.field === "3") {
+    e.preventDefault();
+    tambahBarisSudah();
+  }
 });
 
 function updateTotalsLive(){
   const d = data[currentBulan];
   const tB = hitungTotal(d.belumDibayar);
   const tS = hitungTotal(d.sudahDibayar);
+  const elS = document.getElementById("totalSudah");
+  const elSS = document.getElementById("sumSudah");
+  if (elS) elS.textContent = rupiah(tS);
+  if (elSS) elSS.textContent = rupiah(tS);
   const elB = document.getElementById("totalBelum");
   const elSB = document.getElementById("sumBelum");
   const elGT = document.getElementById("grandTotal");
@@ -847,6 +876,25 @@ function hapusBarisBelum(idx){
   persist();
   render();
   toast(`🗑 Baris "${label}" dihapus`);
+}
+
+function tambahBarisSudah(){
+  const arr = data[currentBulan].sudahDibayar;
+  const last = arr[arr.length - 1];
+  if (last && !last[1] && !last[2] && !last[3]) {
+    const inputs = document.querySelectorAll('#tblSudah input[data-idx="'+(arr.length-1)+'"]');
+    if (inputs[1]) inputs[1].focus();
+    return;
+  }
+  arr.push([toISO(new Date()), "", 0, ""]);
+  persist();
+  render();
+
+  setTimeout(() => {
+    const idx = arr.length - 1;
+    const f = document.querySelector('#tblSudah input[data-idx="'+idx+'"][data-field="1"]');
+    if (f) f.focus();
+  }, 30);
 }
 
 function tambahBarisBelum(){
