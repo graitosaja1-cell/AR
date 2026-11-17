@@ -727,6 +727,13 @@ function buildTableBelum(rows){
   </table>`;
 }
 
+function bulanBerikut(b){
+  const i = NAMA_BULAN.indexOf(b);
+  if (i < 0) return "";
+  const n = NAMA_BULAN[(i + 1) % NAMA_BULAN.length];
+  return n.charAt(0) + n.slice(1).toLowerCase();
+}
+
 function render(){
   const panel = document.getElementById("panel");
   const d = data[currentBulan] || { sudahDibayar: [], belumDibayar: [] };
@@ -741,7 +748,7 @@ function render(){
     ${buildTableSudah(d.sudahDibayar)}
 
     <h2 class="belum">
-      <span>⏳ Hutang Dagang yang Belum Dibayar — ${currentBulan}</span>
+      <span>⏳ Hutang Dagang yang Belum Dibayar — ${currentBulan}, beban Bulan ${bulanBerikut(currentBulan)}</span>
       <button class="btn-tambah" id="btnTambah">+ Tambah Data</button>
     </h2>
     ${buildTableBelum(d.belumDibayar)}
